@@ -1,16 +1,16 @@
-import { IsNotEmpty, IsDateString, IsBoolean, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsDateString, IsBoolean, Matches } from 'class-validator';
 
 export class CreateReservationDto {
   @IsNotEmpty()
   roomId: string;
 
   @IsNotEmpty()
-  @MaxLength(10)
+  @Matches(/\d\d\d\d-\d\d-\d\d/)
   @IsDateString({ strict: true })
   rentedFrom: string;
 
   @IsNotEmpty()
-  @MaxLength(10)
+  @Matches(/\d\d\d\d-\d\d-\d\d/)
   @IsDateString({ strict: true })
   rentedTo: string;
 

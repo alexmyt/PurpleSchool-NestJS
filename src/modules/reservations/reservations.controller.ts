@@ -3,6 +3,7 @@ import {
   Param,
   Body,
   Get,
+  Query,
   Post,
   Patch,
   Delete,
@@ -24,7 +25,7 @@ export class ReservationsController {
   }
 
   @Get('room/:roomId')
-  async findForRoom(@Param('roomId') roomId: string, @Body() dto: GetReservationDto) {
+  async findForRoom(@Param('roomId') roomId: string, @Query() dto: GetReservationDto) {
     return this.reservationsService.findForRoom(roomId, dto);
   }
 
