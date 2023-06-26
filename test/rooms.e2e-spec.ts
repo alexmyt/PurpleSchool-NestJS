@@ -24,7 +24,7 @@ describe('Rooms controller (e2e)', () => {
     disconnect();
   });
 
-  it('should create a new room /rooms (POST)', () => {
+  it('should create a new room, POST /rooms', () => {
     return request(app.getHttpServer())
       .post('/rooms')
       .send(roomDto)
@@ -35,7 +35,7 @@ describe('Rooms controller (e2e)', () => {
       });
   });
 
-  it('should list all rooms /rooms (GET)', () => {
+  it('should list all rooms, GET /rooms', () => {
     return request(app.getHttpServer())
       .get('/rooms')
       .expect(200)
@@ -47,7 +47,7 @@ describe('Rooms controller (e2e)', () => {
       });
   });
 
-  it('should get room /rooms/:id (GET)', () => {
+  it('should get room, GET /rooms/:id', () => {
     return request(app.getHttpServer())
       .get(`/rooms/${roomIdx}`)
       .expect(200)
@@ -57,19 +57,19 @@ describe('Rooms controller (e2e)', () => {
       });
   });
 
-  it('should return 404 when room not found, /rooms/:id GET', () => {
+  it('should return 404 when room not found, GET /rooms/:id', () => {
     return request(app.getHttpServer()).get('/rooms/6497ea5b71d2e5c04fc208e1').expect(404);
   });
 
-  it('should return 404 when room not found, /rooms/:id PATCH', () => {
+  it('should return 404 when room not found, PATCH /rooms/:id', () => {
     return request(app.getHttpServer()).patch('/rooms/6497ea5b71d2e5c04fc208e1').expect(404);
   });
 
-  it('should return 404 when room not found, /rooms/:id DELETE', () => {
+  it('should return 404 when room not found, DELETE /rooms/:id', () => {
     return request(app.getHttpServer()).delete('/rooms/6497ea5b71d2e5c04fc208e1').expect(404);
   });
 
-  it('should set isDeleted when delete the room /rooms/:id (DELETE)', () => {
+  it('should set isDeleted when delete the room, DELETE /rooms/:id', () => {
     return request(app.getHttpServer())
       .delete(`/rooms/${roomIdx}`)
       .expect(200)
@@ -81,7 +81,7 @@ describe('Rooms controller (e2e)', () => {
       });
   });
 
-  it('should change room /rooms/:id (PATCH)', () => {
+  it('should change room, PATCH /rooms/:id', () => {
     const newRoomName = 'New Room Name';
 
     return request(app.getHttpServer())
