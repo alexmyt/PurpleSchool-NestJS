@@ -41,7 +41,7 @@ export class ReservationsService {
     }
 
     return this.reservationModel.create({
-      room,
+      roomId: room._id,
       rentedFrom,
       rentedTo,
     });
@@ -82,7 +82,7 @@ export class ReservationsService {
     period?: Partial<ReservationPeriod>,
   ): Promise<Document<ReservationModel>[]> {
     const query = this.reservationModel.find({
-      room: new Types.ObjectId(roomId),
+      roomId: new Types.ObjectId(roomId),
       isCanceled: false,
     });
 
