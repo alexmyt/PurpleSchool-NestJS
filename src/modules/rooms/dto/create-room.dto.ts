@@ -26,6 +26,7 @@ export class CreateRoomDto {
   @IsOptional()
   @ArrayNotEmpty()
   @IsString({ each: true })
+  @IsNotEmpty({ each: true })
   amenities: string[];
 
   @IsNotEmpty()
