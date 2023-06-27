@@ -1,7 +1,15 @@
-import { IsNotEmpty, IsDateString, IsBoolean, Matches } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsDateString,
+  IsBoolean,
+  Matches,
+  IsOptional,
+  IsMongoId,
+} from 'class-validator';
 
 export class CreateReservationDto {
   @IsNotEmpty()
+  @IsMongoId()
   roomId: string;
 
   @IsNotEmpty()
@@ -14,6 +22,7 @@ export class CreateReservationDto {
   @IsDateString({ strict: true })
   rentedTo: string;
 
+  @IsOptional()
   @IsBoolean()
   isCanceled: boolean;
 }
