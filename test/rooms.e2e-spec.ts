@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { disconnect } from 'mongoose';
 
@@ -17,6 +17,7 @@ describe('Rooms controller (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(new ValidationPipe());
     await app.init();
   });
 
@@ -92,5 +93,15 @@ describe('Rooms controller (e2e)', () => {
         expect(body).toBeDefined();
         expect(body).toEqual(expect.objectContaining({ _id: roomIdx, name: newRoomName }));
       });
+  });
+
+  it.each([
+    { ...roomDto, name: undefined },
+    { ...roomDto, type: 'wrongType' },
+    { ...roomDto, capacity: 0 },
+    { ...roomDto, amenities: 0 },
+    { ...roomDto, amenities: [''] },
+  ])('should return HTTP errors with wrong data, POST /rooms %o', dto => {
+    return request(app.getHttpServer()).post('/rooms').send(dto).expect(400);
   });
 });

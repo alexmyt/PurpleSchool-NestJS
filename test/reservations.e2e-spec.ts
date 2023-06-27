@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { disconnect } from 'mongoose';
 
@@ -19,6 +19,7 @@ describe('Reservations controller (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(new ValidationPipe());
     await app.init();
 
     await request(app.getHttpServer())
@@ -119,4 +120,36 @@ describe('Reservations controller (e2e)', () => {
     await request(app.getHttpServer()).delete(`/reservations/${reservationId}`).expect(200);
     return request(app.getHttpServer()).get(`/reservations/${reservationId}`).expect(404);
   });
+
+  it.each([undefined, 0, ''])(
+    'should return HTTP error with roomId=%p, POST /reservations',
+    roomId => {
+      const dto = { ...reservationDto, roomId };
+      return request(app.getHttpServer()).post('/reservations').send(dto).expect(400);
+    },
+  );
+
+  it.each([undefined, 0, '2003', '20030101', '2003-1-01', '2003-01-32', '2003-01-01T00:00:00Z'])(
+    'should return HTTP error with rentedFrom=%p, POST /reservations',
+    rentedFrom => {
+      const dto = { ...reservationDto, rentedFrom };
+      return request(app.getHttpServer()).post('/reservations').send(dto).expect(400);
+    },
+  );
+
+  it.each([undefined, 0, '2003', '20030101', '2003-1-01', '2003-01-32', '2003-01-01T00:00:00Z'])(
+    'should return HTTP error with rentedTo=%p, POST /reservations',
+    rentedTo => {
+      const dto = { ...reservationDto, rentedTo };
+      return request(app.getHttpServer()).post('/reservations').send(dto).expect(400);
+    },
+  );
+
+  it.each([0, 1, 'some', null])(
+    'should return HTTP error with isCanceled=%p, POST /reservations',
+    isCanceled => {
+      const dto = { ...reservationDto, isCanceled };
+      return request(app.getHttpServer()).post('/reservations').send(dto).expect(400);
+    },
+  );
 });
