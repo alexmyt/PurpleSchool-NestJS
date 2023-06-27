@@ -1,4 +1,13 @@
-import { IsNotEmpty, IsNumber, IsPositive, IsInt, IsEnum } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsPositive,
+  IsInt,
+  IsEnum,
+  IsString,
+  ArrayNotEmpty,
+  IsOptional,
+} from 'class-validator';
 
 import { RoomType } from '../room.model';
 
@@ -14,6 +23,9 @@ export class CreateRoomDto {
   @IsPositive()
   capacity: number;
 
+  @IsOptional()
+  @ArrayNotEmpty()
+  @IsString({ each: true })
   amenities: string[];
 
   @IsNotEmpty()
