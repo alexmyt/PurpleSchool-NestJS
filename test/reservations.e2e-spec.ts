@@ -4,6 +4,7 @@ import * as request from 'supertest';
 import { disconnect } from 'mongoose';
 
 import { AppModule } from '../src/app.module';
+import { AppUtils } from '../src/common/app.utils';
 
 import { roomDto } from './fixtures/room';
 import { reservationDto } from './fixtures/reservations';
@@ -19,7 +20,7 @@ describe('Reservations controller (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe());
+    app.useGlobalPipes(new ValidationPipe(AppUtils.validationPipeOptions()));
     await app.init();
 
     await request(app.getHttpServer())
@@ -121,7 +122,7 @@ describe('Reservations controller (e2e)', () => {
     return request(app.getHttpServer()).get(`/reservations/${reservationId}`).expect(404);
   });
 
-  it.each([undefined, 0, ''])(
+  it.each([undefined, 0, '', ' ', '1', 'xxxxxxxxxxxxxxxxxxxxxxxx'])(
     'should return HTTP error with roomId=%p, POST /reservations',
     roomId => {
       const dto = { ...reservationDto, roomId };

@@ -1,9 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
-import { disconnect } from 'mongoose';
+import { disconnect, Types } from 'mongoose';
 
 import { AppModule } from '../src/app.module';
+import { AppUtils } from '../src/common/app.utils';
 
 import { roomDto } from './fixtures/room';
 
@@ -17,7 +18,7 @@ describe('Rooms controller (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe());
+    app.useGlobalPipes(new ValidationPipe(AppUtils.validationPipeOptions()));
     await app.init();
   });
 
@@ -59,15 +60,18 @@ describe('Rooms controller (e2e)', () => {
   });
 
   it('should return 404 when room not found, GET /rooms/:id', () => {
-    return request(app.getHttpServer()).get('/rooms/6497ea5b71d2e5c04fc208e1').expect(404);
+    const roomId = new Types.ObjectId().toHexString();
+    return request(app.getHttpServer()).get(`/rooms/${roomId}`).expect(404);
   });
 
   it('should return 404 when room not found, PATCH /rooms/:id', () => {
-    return request(app.getHttpServer()).patch('/rooms/6497ea5b71d2e5c04fc208e1').expect(404);
+    const roomId = new Types.ObjectId().toHexString();
+    return request(app.getHttpServer()).patch(`/rooms/${roomId}`).expect(404);
   });
 
   it('should return 404 when room not found, DELETE /rooms/:id', () => {
-    return request(app.getHttpServer()).delete('/rooms/6497ea5b71d2e5c04fc208e1').expect(404);
+    const roomId = new Types.ObjectId().toHexString();
+    return request(app.getHttpServer()).delete(`/rooms/${roomId}`).expect(404);
   });
 
   it('should set isDeleted when delete the room, DELETE /rooms/:id', () => {
