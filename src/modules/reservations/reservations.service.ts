@@ -114,7 +114,7 @@ export class ReservationsService {
    * Return rented periods from DTO as dates from day start and day ending
    */
   private rentedPeriodsToDates(
-    dto: Pick<CreateReservationDto, 'rentedFrom' | 'rentedTo'>,
+    dto: Partial<Pick<CreateReservationDto, 'rentedFrom' | 'rentedTo'>>,
   ): ReservationPeriod {
     const { rentedFrom, rentedTo } = dto;
     return {

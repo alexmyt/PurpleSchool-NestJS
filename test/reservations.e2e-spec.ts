@@ -7,7 +7,7 @@ import { AppModule } from '../src/app.module';
 import { AppUtils } from '../src/common/app.utils';
 
 import { roomDto } from './fixtures/room';
-import { reservationDto } from './fixtures/reservations';
+import { reservationDto, reservationExpectedPeriod } from './fixtures/reservations';
 
 describe('Reservations controller (e2e)', () => {
   let app: INestApplication;
@@ -46,9 +46,8 @@ describe('Reservations controller (e2e)', () => {
         expect(body).toBeDefined();
         expect(body).toEqual(
           expect.objectContaining({
-            rentedFrom: `${createReservationDto.rentedFrom}T00:00:00.000Z`,
-            rentedTo: `${createReservationDto.rentedTo}T23:59:59.999Z`,
             roomId,
+            ...reservationExpectedPeriod,
           }),
         );
         reservationId = body._id;
@@ -63,9 +62,8 @@ describe('Reservations controller (e2e)', () => {
         expect(body).toBeDefined();
         expect(body).toEqual(
           expect.objectContaining({
-            rentedFrom: `${reservationDto.rentedFrom}T00:00:00.000Z`,
-            rentedTo: `${reservationDto.rentedTo}T23:59:59.999Z`,
             roomId,
+            ...reservationExpectedPeriod,
           }),
         );
       });
@@ -80,9 +78,8 @@ describe('Reservations controller (e2e)', () => {
         expect(body).toEqual(
           expect.arrayContaining([
             expect.objectContaining({
-              rentedFrom: `${reservationDto.rentedFrom}T00:00:00.000Z`,
-              rentedTo: `${reservationDto.rentedTo}T23:59:59.999Z`,
               roomId,
+              ...reservationExpectedPeriod,
             }),
           ]),
         );
@@ -108,9 +105,8 @@ describe('Reservations controller (e2e)', () => {
         expect(body).toEqual(
           expect.arrayContaining([
             expect.objectContaining({
-              rentedFrom: `${reservationDto.rentedFrom}T00:00:00.000Z`,
-              rentedTo: `${reservationDto.rentedTo}T23:59:59.999Z`,
               roomId,
+              ...reservationExpectedPeriod,
             }),
           ]),
         );
