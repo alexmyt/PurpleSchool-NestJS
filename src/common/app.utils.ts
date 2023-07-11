@@ -1,11 +1,11 @@
 import { ValidationPipeOptions } from '@nestjs/common';
 
 export const AppUtils = {
-  validationPipeOptions(): ValidationPipeOptions {
+  validationPipeOptions(pipeOptions?: ValidationPipeOptions): ValidationPipeOptions {
     return {
       transform: true,
       whitelist: true,
-      enableDebugMessages: !process.env.NODE_ENV || process.env.NODE_ENV.startsWith('dev'),
+      ...pipeOptions,
     };
   },
 };
