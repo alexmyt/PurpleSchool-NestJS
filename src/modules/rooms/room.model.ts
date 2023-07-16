@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Document } from 'mongoose';
+import { HydratedDocument, Schema as MongoSchema } from 'mongoose';
 
 export type RoomModelDocument = HydratedDocument<RoomModel>;
 
@@ -9,7 +9,7 @@ export enum RoomType {
 }
 
 @Schema({ timestamps: true })
-export class RoomModel extends Document {
+export class RoomModel {
   @Prop({ required: true })
   name: string;
 
@@ -24,6 +24,9 @@ export class RoomModel extends Document {
 
   @Prop({ required: true })
   price: number;
+
+  @Prop({ type: MongoSchema.Types.ObjectId, ref: 'UserModel', required: true })
+  userId: string;
 
   @Prop({ index: true })
   isDeleted: boolean;

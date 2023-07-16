@@ -7,6 +7,7 @@ import {
   IsString,
   ArrayNotEmpty,
   IsOptional,
+  IsMongoId,
 } from 'class-validator';
 
 import { RoomType } from '../room.model';
@@ -14,6 +15,9 @@ import { RoomType } from '../room.model';
 export class CreateRoomDto {
   @IsNotEmpty()
   name: string;
+
+  @IsMongoId()
+  userId: string;
 
   @IsEnum(RoomType)
   type: RoomType;

@@ -9,9 +9,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { Public } from '../../common/decorators/public.decorator';
+import { CheckAbility } from '../../lib/casl/policies.decorator';
+import { Action } from '../../common/permission.enum';
+
 import { RoomsService } from './rooms.service';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
+import { RoomsSubjectHook } from './rooms.subject-hook';
+import { RoomModel } from './room.model';
 
 @Controller('rooms')
 export class RoomsController {
@@ -22,11 +28,13 @@ export class RoomsController {
     return this.roomsService.create(createRoomDto);
   }
 
+  @Public()
   @Get()
   findAll() {
     return this.roomsService.findAll();
   }
 
+  @Public()
   @Get(':id')
   async findOneById(@Param('id') id: string) {
     const result = await this.roomsService.findOneById(id);
@@ -38,6 +46,7 @@ export class RoomsController {
   }
 
   @Patch(':id')
+  @CheckAbility(RoomModel, RoomsSubjectHook, Action.UPDATE)
   async update(@Param('id') id: string, @Body() updateRoomDto: UpdateRoomDto) {
     const result = await this.roomsService.update(id, updateRoomDto);
     if (!result) {
@@ -48,6 +57,7 @@ export class RoomsController {
   }
 
   @Delete(':id')
+  @CheckAbility(RoomModel, RoomsSubjectHook, Action.DELETE)
   async remove(@Param('id') id: string) {
     const result = await this.roomsService.softRemove(id);
     if (!result) {

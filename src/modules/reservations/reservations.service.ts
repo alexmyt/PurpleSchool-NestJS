@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Document, Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
 
 import { RoomsService } from '../rooms/rooms.service';
 
-import { ReservationModel } from './reservation.model';
+import { ReservationModel, ReservationModelDocument } from './reservation.model';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { GetReservationDto } from './dto/get-reservation.dto';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
@@ -21,7 +21,7 @@ export class ReservationsService {
     private readonly roomsService: RoomsService,
   ) {}
 
-  async create(createScheduleDto: CreateReservationDto): Promise<Document<ReservationModel>> {
+  async create(createScheduleDto: CreateReservationDto): Promise<ReservationModelDocument> {
     const { roomId } = createScheduleDto;
 
     const room = await this.roomsService.findOneById(roomId);
@@ -41,24 +41,25 @@ export class ReservationsService {
     }
 
     return this.reservationModel.create({
+      ...createScheduleDto,
       roomId: room._id,
       rentedFrom,
       rentedTo,
     });
   }
 
-  findForRoom(roomId: string, dto: GetReservationDto): Promise<Document<ReservationModel>[]> {
+  findForRoom(roomId: string, dto: GetReservationDto): Promise<ReservationModel[]> {
     return this.getRoomReservations(roomId, this.rentedPeriodsToDates(dto));
   }
 
-  findOneById(reservationId: string): Promise<Document<ReservationModel> | null> {
-    return this.reservationModel.findById(reservationId).lean().exec();
+  findOneById<L = false>(
+    reservationId: string,
+    lean?: L,
+  ): Promise<(ReservationModel | ReservationModelDocument) | null> {
+    return this.reservationModel.findById(reservationId).lean(lean).exec();
   }
 
-  async update(
-    reservationId: string,
-    dto: UpdateReservationDto,
-  ): Promise<Document<ReservationModel> | null> {
+  async update(reservationId: string, dto: UpdateReservationDto): Promise<ReservationModel | null> {
     const { rentedFrom, rentedTo, ...rest } = dto;
     const rentedPeriod = this.rentedPeriodsToDates({ rentedFrom, rentedTo });
     return this.reservationModel
@@ -67,11 +68,15 @@ export class ReservationsService {
       .exec();
   }
 
-  delete(reservationId: string): Promise<Document<ReservationModel> | null> {
+  cancel(reservationId: string): Promise<ReservationModel | null> {
     return this.reservationModel
-      .findByIdAndDelete(reservationId, { returnDocument: 'after' })
+      .findByIdAndUpdate(reservationId, { isCanceled: true }, { returnDocument: 'after' })
       .lean()
       .exec();
+  }
+
+  delete(reservationId: string): Promise<ReservationModel | null> {
+    return this.reservationModel.findByIdAndDelete(reservationId).lean().exec();
   }
 
   /**
@@ -80,7 +85,7 @@ export class ReservationsService {
   async getRoomReservations(
     roomId: string,
     period?: Partial<ReservationPeriod>,
-  ): Promise<Document<ReservationModel>[]> {
+  ): Promise<ReservationModel[]> {
     const query = this.reservationModel.find({
       roomId: new Types.ObjectId(roomId),
       isCanceled: false,
