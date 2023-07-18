@@ -42,7 +42,10 @@ export class PoliciesGuard implements CanActivate {
     const { subjectClass, subjectHookClass, action } = abilityConfig;
 
     if (action === Action.CREATE) {
-      return ability.can(action, new subjectClass());
+      // check user have abilities to create new subject with those fields
+      const subject = new subjectClass();
+      Object.assign(subject, request.body);
+      return ability.can(action, subject);
     }
 
     const abilitySubjectHook = this.moduleRef.get(subjectHookClass, { strict: false });

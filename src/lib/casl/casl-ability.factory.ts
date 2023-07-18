@@ -31,7 +31,9 @@ export class CaslAbilityFactory {
 
       // User can edit his rooms
       // TODO: deletion should be more complexity than a simple 'soft deletion' (if the room has an active or paid reservation)
-      can<RoomModel>([Action.UPDATE, Action.DELETE], 'RoomModel', { userId: user.id });
+      can<RoomModel>([Action.UPDATE, Action.DELETE, Action.CREATE], 'RoomModel', {
+        userId: user.id,
+      });
 
       // User cannot edit his reservations
       // TODO: user needs the ability to cancel his reservation only, not to update other props

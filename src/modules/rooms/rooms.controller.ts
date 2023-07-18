@@ -25,6 +25,7 @@ export class RoomsController {
   constructor(private readonly roomsService: RoomsService) {}
 
   @Post()
+  @CheckAbility(RoomModel, RoomsSubjectHook, Action.CREATE)
   create(@Body() createRoomDto: CreateRoomDto) {
     return this.roomsService.create(createRoomDto);
   }

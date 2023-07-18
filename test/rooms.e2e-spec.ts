@@ -218,7 +218,7 @@ describe('Rooms controller (e2e)', () => {
     return request(app.getHttpServer())
       .post('/rooms')
       .auth(testUserToken, { type: 'bearer' })
-      .send(dto)
+      .send({ ...dto, userId: testUserId })
       .expect(400);
   });
 });
