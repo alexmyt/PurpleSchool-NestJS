@@ -16,6 +16,7 @@ import { Action } from '../../common/permission.enum';
 import { RoomsService } from './rooms.service';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
+import { GetRoomDto } from './dto/get-room.dto';
 import { RoomsSubjectHook } from './rooms.subject-hook';
 import { RoomModel } from './room.model';
 
@@ -36,7 +37,7 @@ export class RoomsController {
 
   @Public()
   @Get(':id')
-  async findOneById(@Param('id') id: string) {
+  async findOneById(@Param() { id }: GetRoomDto) {
     const result = await this.roomsService.findOneById(id);
     if (!result) {
       throw new NotFoundException();
@@ -47,7 +48,7 @@ export class RoomsController {
 
   @Patch(':id')
   @CheckAbility(RoomModel, RoomsSubjectHook, Action.UPDATE)
-  async update(@Param('id') id: string, @Body() updateRoomDto: UpdateRoomDto) {
+  async update(@Param() { id }: GetRoomDto, @Body() updateRoomDto: UpdateRoomDto) {
     const result = await this.roomsService.update(id, updateRoomDto);
     if (!result) {
       throw new NotFoundException();
@@ -58,7 +59,7 @@ export class RoomsController {
 
   @Delete(':id')
   @CheckAbility(RoomModel, RoomsSubjectHook, Action.DELETE)
-  async remove(@Param('id') id: string) {
+  async remove(@Param() { id }: GetRoomDto) {
     const result = await this.roomsService.softRemove(id);
     if (!result) {
       throw new NotFoundException();

@@ -18,6 +18,7 @@ import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
+import { GetUserDto } from './dto/get-user.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { USER_NOT_FOUND } from './users.constants';
 import { UserModel } from './user.model';
@@ -47,7 +48,7 @@ export class UsersController {
 
   @Get(':id')
   @CheckAbility(UserModel, UsersSubjectHook, Action.READ)
-  async findOneById(@Param('id') id: string) {
+  async findOneById(@Param() { id }: GetUserDto) {
     const result = await this.usersService.findOneById(id);
 
     if (!result) {
@@ -59,19 +60,19 @@ export class UsersController {
 
   @Patch(':id')
   @CheckAbility(UserModel, UsersSubjectHook, Action.UPDATE)
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+  update(@Param() { id }: GetUserDto, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(id, updateUserDto);
   }
 
   @Patch(':id/password')
   @CheckAbility(UserModel, UsersSubjectHook, Action.UPDATE)
-  updatePassword(@Param('id') id: string, @Body() updateUserDto: UpdatePasswordDto) {
+  updatePassword(@Param() { id }: GetUserDto, @Body() updateUserDto: UpdatePasswordDto) {
     return this.usersService.updatePassword(id, updateUserDto);
   }
 
   @Delete(':id')
   @CheckAbility(UserModel, UsersSubjectHook, Action.DELETE)
-  softRemove(@Param('id') id: string) {
+  softRemove(@Param() { id }: GetUserDto) {
     return this.usersService.softRemove(id);
   }
 }

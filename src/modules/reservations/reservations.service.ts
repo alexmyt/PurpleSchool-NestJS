@@ -6,7 +6,7 @@ import { RoomsService } from '../rooms/rooms.service';
 
 import { ReservationModel, ReservationModelDocument } from './reservation.model';
 import { CreateReservationDto } from './dto/create-reservation.dto';
-import { GetReservationDto } from './dto/get-reservation.dto';
+import { FindReservationsDto } from './dto/find-reservations.dto';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
 
 export interface ReservationPeriod {
@@ -48,7 +48,7 @@ export class ReservationsService {
     });
   }
 
-  findForRoom(roomId: string, dto: GetReservationDto): Promise<ReservationModel[]> {
+  findForRoom(roomId: string, dto: FindReservationsDto): Promise<ReservationModel[]> {
     return this.getRoomReservations(roomId, this.rentedPeriodsToDates(dto));
   }
 

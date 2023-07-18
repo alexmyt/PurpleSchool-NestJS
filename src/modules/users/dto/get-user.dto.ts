@@ -1,6 +1,6 @@
 import { IsMongoId } from 'class-validator';
 
-export class GetReservationDto {
+export class GetUserDto {
   @IsMongoId()
   id: string;
 }

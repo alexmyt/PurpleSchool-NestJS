@@ -14,11 +14,13 @@ import { Public } from '../../common/decorators/public.decorator';
 import { Action, UserRole } from '../../common/permission.enum';
 import { CheckAbility } from '../../lib/casl/policies.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { GetRoomDto } from '../rooms/dto/get-room.dto';
 
 import { ReservationsService } from './reservations.service';
-import { GetReservationDto } from './dto/get-reservation.dto';
+import { FindReservationsDto } from './dto/find-reservations.dto';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
+import { GetReservationDto } from './dto/get-reservation.dto';
 import { ReservationModel } from './reservation.model';
 import { ReservationsSubjectHook } from './reservations.subject-hook';
 
@@ -33,14 +35,14 @@ export class ReservationsController {
   }
 
   @Public()
-  @Get('room/:roomId')
-  async findForRoom(@Param('roomId') roomId: string, @Query() dto: GetReservationDto) {
-    return this.reservationsService.findForRoom(roomId, dto);
+  @Get('room/:id')
+  async findForRoom(@Param() { id }: GetRoomDto, @Query() dto: FindReservationsDto) {
+    return this.reservationsService.findForRoom(id, dto);
   }
 
   @Public()
   @Get(':id')
-  async findOneById(@Param('id') id: string) {
+  async findOneById(@Param() { id }: GetReservationDto) {
     const result = await this.reservationsService.findOneById(id);
     if (!result) {
       throw new NotFoundException();
@@ -52,7 +54,7 @@ export class ReservationsController {
   @Patch(':id')
   @Roles(UserRole.ADMIN)
   @CheckAbility(ReservationModel, ReservationsSubjectHook, Action.UPDATE)
-  async update(@Param('id') id: string, @Body() dto: UpdateReservationDto) {
+  async update(@Param() { id }: GetReservationDto, @Body() dto: UpdateReservationDto) {
     const result = await this.reservationsService.update(id, dto);
     if (!result) {
       throw new NotFoundException();
@@ -63,7 +65,7 @@ export class ReservationsController {
 
   @Patch(':id/cancel')
   @CheckAbility(ReservationModel, ReservationsSubjectHook, Action.UPDATE)
-  async cancel(@Param('id') id: string) {
+  async cancel(@Param() { id }: GetReservationDto) {
     const result = await this.reservationsService.cancel(id);
     if (!result) {
       throw new NotFoundException();
@@ -74,7 +76,7 @@ export class ReservationsController {
 
   @Delete(':id')
   @CheckAbility(ReservationModel, ReservationsSubjectHook, Action.DELETE)
-  async remove(@Param('id') id: string) {
+  async remove(@Param() { id }: GetReservationDto) {
     const result = await this.reservationsService.delete(id);
     if (!result) {
       throw new NotFoundException();
