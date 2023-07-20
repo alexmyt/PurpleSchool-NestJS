@@ -1,12 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Schema as MongoSchema } from 'mongoose';
+import { HydratedDocument } from 'mongoose';
 
 export type ReservationModelDocument = HydratedDocument<ReservationModel>;
 
 @Schema({ timestamps: true })
 export class ReservationModel {
   @Prop({ ref: 'RoomModel', required: true })
-  roomId: MongoSchema.Types.ObjectId;
+  roomId: string;
 
   @Prop({ required: true })
   rentedFrom: Date;
@@ -15,7 +15,7 @@ export class ReservationModel {
   rentedTo: Date;
 
   @Prop({ ref: 'UserModel', required: true })
-  userId: MongoSchema.Types.ObjectId;
+  userId: string;
 
   @Prop({ default: false })
   isCanceled: boolean;

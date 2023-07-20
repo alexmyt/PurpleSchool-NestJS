@@ -8,6 +8,7 @@ import { ReservationModel, ReservationModelDocument } from './reservation.model'
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { FindReservationsDto } from './dto/find-reservations.dto';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
+import { ReservationEntity } from './reservations.service.interfaces';
 
 export interface ReservationPeriod {
   rentedFrom: Date;
@@ -31,7 +32,7 @@ export class ReservationsService {
 
     const { rentedFrom, rentedTo } = this.rentedPeriodsToDates(createScheduleDto);
 
-    const currentRoomReservations = await this.getRoomReservations(room.id, {
+    const currentRoomReservations = await this.getRoomReservations(room._id, {
       rentedFrom,
       rentedTo,
     });
@@ -52,9 +53,7 @@ export class ReservationsService {
     return this.getRoomReservations(roomId, this.rentedPeriodsToDates(dto));
   }
 
-  async findOneById(
-    reservationId: string,
-  ): Promise<(ReservationModel | ReservationModelDocument) | null> {
+  async findOneById(reservationId: string): Promise<ReservationEntity | null> {
     const result = await this.reservationModel
       .aggregate()
       .match({ _id: new Types.ObjectId(reservationId) })

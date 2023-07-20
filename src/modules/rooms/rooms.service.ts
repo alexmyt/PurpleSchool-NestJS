@@ -5,6 +5,7 @@ import { Model, Types } from 'mongoose';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { RoomModel, RoomModelDocument } from './room.model';
+import { RoomEntity } from './rooms.service.interfaces';
 
 @Injectable()
 export class RoomsService {
@@ -14,7 +15,7 @@ export class RoomsService {
     return this.roomModel.create(createRoomDto);
   }
 
-  findAll(): Promise<RoomModel[]> {
+  findAll(): Promise<RoomEntity[]> {
     return this.roomModel
       .aggregate([
         { $match: { $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }] } },
@@ -34,7 +35,7 @@ export class RoomsService {
       .exec();
   }
 
-  async findOneById(id: string): Promise<RoomModelDocument | null> {
+  async findOneById(id: string): Promise<RoomEntity | null> {
     const result = await this.roomModel
       .aggregate([
         { $match: { _id: new Types.ObjectId(id) } },
