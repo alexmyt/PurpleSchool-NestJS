@@ -52,11 +52,24 @@ export class ReservationsService {
     return this.getRoomReservations(roomId, this.rentedPeriodsToDates(dto));
   }
 
-  findOneById<L = false>(
+  async findOneById(
     reservationId: string,
-    lean?: L,
   ): Promise<(ReservationModel | ReservationModelDocument) | null> {
-    return this.reservationModel.findById(reservationId).lean(lean).exec();
+    const result = await this.reservationModel
+      .aggregate()
+      .match({ _id: new Types.ObjectId(reservationId) })
+      .lookup({
+        from: 'users',
+        let: { userId: '$userId' },
+        pipeline: [{ $match: { $expr: { $eq: ['$_id', '$$userId'] } } }, { $project: { name: 1 } }],
+        as: 'user',
+      })
+      .unwind({ path: '$user', preserveNullAndEmptyArrays: true })
+      .lookup({ from: 'rooms', localField: 'roomId', foreignField: '_id', as: 'room' })
+      .unwind({ path: '$room', preserveNullAndEmptyArrays: true })
+      .exec();
+
+    return result.length ? result[0] : null;
   }
 
   async update(reservationId: string, dto: UpdateReservationDto): Promise<ReservationModel | null> {

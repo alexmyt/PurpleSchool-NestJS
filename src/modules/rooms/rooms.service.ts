@@ -16,13 +16,48 @@ export class RoomsService {
 
   findAll(): Promise<RoomModel[]> {
     return this.roomModel
-      .find({ $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }] })
-      .lean()
+      .aggregate([
+        { $match: { $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }] } },
+        {
+          $lookup: {
+            from: 'users',
+            let: { userId: '$userId' },
+            pipeline: [
+              { $match: { $expr: { $eq: ['$_id', '$$userId'] } } },
+              { $project: { name: 1 } },
+            ],
+            as: 'user',
+          },
+        },
+        { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+      ])
       .exec();
   }
 
-  findOneById(id: string): Promise<RoomModelDocument | null> {
-    return this.roomModel.findById(id).exec();
+  async findOneById(id: string): Promise<RoomModelDocument | null> {
+    const result = await this.roomModel
+      .aggregate([
+        { $match: { _id: new Types.ObjectId(id) } },
+        {
+          $lookup: {
+            from: 'users',
+            let: { userId: '$userId' },
+            pipeline: [
+              { $match: { $expr: { $eq: ['$_id', '$$userId'] } } },
+              { $project: { name: 1 } },
+            ],
+            as: 'user',
+          },
+        },
+        { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+      ])
+      .exec();
+
+    return result.length ? result[0] : null;
+  }
+
+  findOneByIdAggregated(id: string) {
+    return this.roomModel.findById(id).populate({ path: 'userId', select: 'name' }).exec();
   }
 
   update(id: string, updateRoomDto: UpdateRoomDto): Promise<RoomModel> {

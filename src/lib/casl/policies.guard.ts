@@ -1,6 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable, NotFoundException } from '@nestjs/common';
 import { Reflector, ModuleRef } from '@nestjs/core';
 import { Request } from 'express';
+import { subject as setSubjectType } from '@casl/ability';
 
 import { CHECK_ABILITY_KEY, IS_PUBLIC_KEY } from '../../common/constants';
 import { Action } from '../../common/permission.enum';
@@ -54,6 +55,6 @@ export class PoliciesGuard implements CanActivate {
       throw new NotFoundException();
     }
 
-    return ability.can(action, subject);
+    return ability.can(action, setSubjectType(subjectClass.name, subject));
   }
 }
