@@ -23,10 +23,18 @@ import { UpdateReservationDto } from './dto/update-reservation.dto';
 import { GetReservationDto } from './dto/get-reservation.dto';
 import { ReservationModel } from './reservation.model';
 import { ReservationsSubjectHook } from './reservations.subject-hook';
+import { GetReservationsStatisticsDto } from './dto/get-reservations-statistics.dto';
 
 @Controller('reservations')
 export class ReservationsController {
   constructor(private readonly reservationsService: ReservationsService) {}
+
+  @Get('stats')
+  @Roles(UserRole.ADMIN)
+  async getStats(@Query() { from, to }: GetReservationsStatisticsDto) {
+    const result = await this.reservationsService.getRoomsStatistics(from, to);
+    return result;
+  }
 
   @Post()
   @CheckAbility(ReservationModel, ReservationsSubjectHook, Action.CREATE)

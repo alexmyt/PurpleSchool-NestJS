@@ -10,7 +10,7 @@ import { ReservationModelDocument } from '../src/modules/reservations/reservatio
 import { ReservationsService } from '../src/modules/reservations/reservations.service';
 import { RoomModelDocument } from '../src/modules/rooms/room.model';
 
-import { fakeRoom } from './fixtures/room';
+import { fakeRoom, fakeRoomList } from './fixtures/room';
 import {
   createReservationDto,
   reservationExpectedPeriod,
@@ -273,6 +273,39 @@ describe('Reservations controller (e2e)', () => {
       .delete(`/reservations/${reservationId}`)
       .auth(testAdminToken, { type: 'bearer' })
       .expect(200);
+
     return request(app.getHttpServer()).get(`/reservations/${reservationId}`).expect(404);
+  });
+
+  it('should get reservation statistics by room, GET /stats', () => {
+    const query = {
+      from: '2023-04-01',
+      to: '2023-04-30',
+    };
+
+    const expected = [
+      {
+        roomId: fakeRoomList[0]._id.toHexString(),
+        bookedDaysCount: 3,
+      },
+      {
+        roomId: fakeRoomList[1]._id.toHexString(),
+        bookedDaysCount: 2,
+      },
+    ];
+
+    return request(app.getHttpServer())
+      .get('/reservations/stats')
+      .query(query)
+      .auth(testAdminToken, { type: 'bearer' })
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining(expected[0]),
+            expect.objectContaining(expected[1]),
+          ]),
+        );
+      });
   });
 });

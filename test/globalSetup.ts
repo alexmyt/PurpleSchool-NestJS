@@ -1,33 +1,60 @@
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { disconnect } from 'mongoose';
+import mongoose from 'mongoose';
 
-import { AppModule } from '../src/app.module';
-import { UsersService } from '../src/modules/users/users.service';
+import { ConfigModule } from '../src/lib/config/config.module';
+import { HelperService } from '../src/common/helper.service';
 
 import { testUsers } from './fixtures/user';
+import { fakeRoomList } from './fixtures/room';
+import { fakeReservationList } from './fixtures/reservations';
 
-const setup = async (): Promise<void> => {
+const setup = async () => {
   const moduleFixture: TestingModule = await Test.createTestingModule({
-    imports: [AppModule],
+    imports: [ConfigModule],
   }).compile();
 
-  const app = moduleFixture.createNestApplication();
+  const config = moduleFixture.get(ConfigService);
 
-  const userService = app.get(UsersService);
+  await mongoose.connect(config.getOrThrow('mongodb.uri'), {
+    user: config.get('mongodb.user'),
+    pass: config.get('mongodb.pass'),
+    dbName: config.get('mongodb.dbName'),
+  });
 
-  let testAdmin = await userService.findOneByEmail(testUsers.admin.email);
-  if (testAdmin) {
-    await testAdmin.deleteOne();
+  await clearDb();
+
+  await addTestUsers();
+  await addTestRooms();
+  await addTestReservations();
+
+  mongoose.disconnect();
+};
+
+const clearDb = async () => {
+  const collections = await mongoose.connection.db.collections();
+
+  for (const collection of collections) {
+    await collection.deleteMany();
   }
-  testAdmin = await userService.create(testUsers.admin);
+};
 
-  let testUser = await userService.findOneByEmail(testUsers.user.email);
-  if (testUser) {
-    await testUser.deleteOne();
+const addTestUsers = async () => {
+  const usersCollection = mongoose.connection.db.collection('users');
+  for (const { password, ...newUser } of [testUsers.admin, testUsers.user]) {
+    const hashedPassword = await HelperService.hashPassword(password);
+    await usersCollection.insertOne({ ...newUser, hashedPassword });
   }
-  testUser = await userService.create(testUsers.user);
+};
 
-  disconnect();
+const addTestRooms = async () => {
+  const roomsCollection = mongoose.connection.db.collection('rooms');
+  await roomsCollection.insertMany(fakeRoomList);
+};
+
+const addTestReservations = async () => {
+  const reservationsCollection = mongoose.connection.db.collection('reservations');
+  await reservationsCollection.insertMany(fakeReservationList);
 };
 
 export default setup;

@@ -1,4 +1,5 @@
 import { faker } from '@faker-js/faker';
+import mongoose from 'mongoose';
 
 import { UserRole } from '../../src/common/permission.enum';
 
@@ -15,14 +16,14 @@ const fakeUser = () => {
 export const testUsers = {
   admin: {
     ...fakeUser(),
-    _id: faker.database.mongodbObjectId(),
+    _id: new mongoose.Types.ObjectId(faker.database.mongodbObjectId()),
     email: 'test.admin@dot.com',
     password: 'Admin@1',
     role: UserRole.ADMIN,
   },
   user: {
     ...fakeUser(),
-    _id: faker.database.mongodbObjectId(),
+    _id: new mongoose.Types.ObjectId(faker.database.mongodbObjectId()),
     email: 'test.user@dot.com',
     password: 'User@1',
   },

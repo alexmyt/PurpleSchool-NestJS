@@ -26,3 +26,13 @@ export interface ReservationEntity {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface ReservationStatisticsByRoom {
+  roomId: string;
+  bookedDaysCount: number;
+  room: {
+    _id: string;
+    name: string;
+    type: RoomType;
+  };
+}

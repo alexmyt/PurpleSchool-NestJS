@@ -8,7 +8,7 @@ import { ReservationModel, ReservationModelDocument } from './reservation.model'
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { FindReservationsDto } from './dto/find-reservations.dto';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
-import { ReservationEntity } from './reservations.service.interfaces';
+import { ReservationEntity, ReservationStatisticsByRoom } from './reservations.service.interfaces';
 
 export interface ReservationPeriod {
   rentedFrom: Date;
@@ -138,5 +138,57 @@ export class ReservationsService {
       rentedFrom: dto.rentedFrom && new Date(new Date(rentedFrom).setUTCHours(0, 0, 0, 0)),
       rentedTo: dto.rentedTo && new Date(new Date(rentedTo).setUTCHours(23, 59, 59, 999)),
     };
+  }
+
+  async getRoomsStatistics(from: string, to: string): Promise<ReservationStatisticsByRoom[]> {
+    // From day start
+    const dateFrom = new Date(new Date(from).setUTCHours(0, 0, 0, 0));
+    // To day end
+    const dateTo = new Date(new Date(to).setUTCHours(23, 59, 59, 999));
+
+    const result = await this.reservationModel
+      .aggregate()
+      // Get all reservations which included (fully or partial) to requested period
+      .match({
+        $or: [
+          { rentedFrom: { $gte: dateFrom, $lte: dateTo } },
+          { rentedTo: { $gte: dateFrom, $lte: dateTo } },
+          { rentedFrom: { $lt: dateFrom }, rentedTo: { $gt: dateTo } },
+        ],
+      })
+      // Trim reservation periods to requested period
+      .addFields({
+        rentedFrom: { $max: [dateFrom, '$rentedFrom'] },
+        rentedTo: { $min: [dateTo, '$rentedTo'] },
+      })
+      // Setting dates to the beginning of days to help MongoDB count full days
+      .addFields({
+        // rentedFrom - start of the day
+        rentedFrom: { $dateTrunc: { date: '$rentedFrom', unit: 'day' } },
+        // rentedTo - start of the next day
+        rentedTo: {
+          $dateTrunc: {
+            date: { $dateAdd: { startDate: '$rentedTo', unit: 'day', amount: 1 } },
+            unit: 'day',
+          },
+        },
+      })
+      // Count days in periods
+      .addFields({
+        bookedDaysCount: {
+          $dateDiff: { startDate: '$rentedFrom', endDate: '$rentedTo', unit: 'day' },
+        },
+      })
+      // Group results by room and booked days count
+      .group({ _id: '$roomId', bookedDaysCount: { $sum: '$bookedDaysCount' } })
+      // Add rooms data
+      .lookup({ from: 'rooms', as: 'room', localField: '_id', foreignField: '_id' })
+      // Convert field 'room' from array of objects to a single object
+      .unwind('$room')
+      .project({ roomId: '$_id', bookedDaysCount: 1, room: 1 })
+      .project({ _id: 0 })
+      .exec();
+
+    return result;
   }
 }
