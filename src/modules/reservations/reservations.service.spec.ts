@@ -14,8 +14,12 @@ describe('ReservationService', () => {
   const where = jest.fn();
   const mockReservationModel = {
     find: jest.fn(() => ({ where, lean: () => exec })),
+    findOne: jest.fn(() => ({ where, lean: () => exec })),
+    create: jest.fn(() => ({})),
   };
-  const mockRoomsService = {};
+  const mockRoomsService = {
+    findOneById: jest.fn(() => ({ where, lean: () => exec })),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -33,6 +37,48 @@ describe('ReservationService', () => {
 
   it('Should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('create', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    it('should create new reservation for room', async () => {
+      const dto = {
+        userId: '1',
+        roomId: new Types.ObjectId().toHexString(),
+        rentedFrom: '2023-01-01',
+        rentedTo: '2023-01-01',
+      };
+
+      const expectedFrom = new Date(Date.UTC(2023, 0, 1));
+      const expectedTo = new Date(Date.UTC(2023, 0, 2) - 1);
+
+      jest.spyOn(service, 'isReserved').mockResolvedValueOnce(false);
+
+      await service.create(dto);
+
+      expect(service.isReserved).toHaveBeenCalledTimes(1);
+      expect(service.isReserved).toHaveBeenCalledWith(dto.roomId, expectedFrom, expectedTo);
+    });
+
+    it('isReserved', async () => {
+      const rentedFrom = '2023-01-01';
+      const rentedTo = '2023-01-01';
+
+      const expected$gte = new Date(Date.UTC(2023, 0, 1));
+      const expected$lte = new Date(Date.UTC(2023, 0, 2) - 1);
+
+      await service.isReserved(new Types.ObjectId().toHexString(), rentedFrom, rentedTo);
+
+      expect(mockReservationModel.findOne).toBeCalledTimes(1);
+      expect(mockReservationModel.findOne().where).toHaveBeenCalledWith(
+        expect.objectContaining({
+          $or: expect.arrayContaining([
+            expect.objectContaining({ rentedFrom: { $gte: expected$gte, $lte: expected$lte } }),
+          ]),
+        }),
+      );
+    });
   });
 
   describe('getRoomReservations', () => {

@@ -32,12 +32,9 @@ export class ReservationsService {
 
     const { rentedFrom, rentedTo } = this.rentedPeriodsToDates(createScheduleDto);
 
-    const currentRoomReservations = await this.getRoomReservations(room._id, {
-      rentedFrom,
-      rentedTo,
-    });
+    const isReserved = await this.isReserved(roomId, rentedFrom, rentedTo);
 
-    if (currentRoomReservations.length) {
+    if (isReserved) {
       throw new ConflictException();
     }
 
@@ -92,6 +89,25 @@ export class ReservationsService {
   }
 
   /**
+   * Return true if room has been reserved in period
+   */
+  async isReserved(roomId: string, from: string | Date, to: string | Date): Promise<boolean> {
+    const dateFrom = this.startOfDayUTC(from);
+    const dateTo = this.endOfDayUTC(to);
+
+    const result = await this.reservationModel.findOne().where({
+      roomId: new Types.ObjectId(roomId),
+      $or: [
+        { rentedFrom: { $gte: dateFrom, $lte: dateTo } },
+        { rentedTo: { $gte: dateFrom, $lte: dateTo } },
+        { rentedFrom: { $lt: dateFrom }, rentedTo: { $gt: dateTo } },
+      ],
+    });
+
+    return result !== null;
+  }
+
+  /**
    * Return room reservation periods within dates in given period
    */
   async getRoomReservations(
@@ -128,23 +144,13 @@ export class ReservationsService {
   }
 
   /**
-   * Return rented periods from DTO as dates from day start and day ending
+   * Return reservations statistics by room in the period
    */
-  private rentedPeriodsToDates(
-    dto: Partial<Pick<CreateReservationDto, 'rentedFrom' | 'rentedTo'>>,
-  ): ReservationPeriod {
-    const { rentedFrom, rentedTo } = dto;
-    return {
-      rentedFrom: dto.rentedFrom && new Date(new Date(rentedFrom).setUTCHours(0, 0, 0, 0)),
-      rentedTo: dto.rentedTo && new Date(new Date(rentedTo).setUTCHours(23, 59, 59, 999)),
-    };
-  }
-
   async getRoomsStatistics(from: string, to: string): Promise<ReservationStatisticsByRoom[]> {
     // From day start
-    const dateFrom = new Date(new Date(from).setUTCHours(0, 0, 0, 0));
+    const dateFrom = this.startOfDayUTC(from);
     // To day end
-    const dateTo = new Date(new Date(to).setUTCHours(23, 59, 59, 999));
+    const dateTo = this.endOfDayUTC(to);
 
     const result = await this.reservationModel
       .aggregate()
@@ -190,5 +196,33 @@ export class ReservationsService {
       .exec();
 
     return result;
+  }
+
+  private startOfDayUTC(date: string | number | Date): Date {
+    const localDate = new Date(date);
+    return new Date(
+      Date.UTC(localDate.getFullYear(), localDate.getMonth(), localDate.getDate(), 0, 0, 0, 0),
+    );
+  }
+
+  private endOfDayUTC(date: string | number | Date): Date {
+    const localDate = new Date(date);
+    return new Date(
+      Date.UTC(localDate.getFullYear(), localDate.getMonth(), localDate.getDate(), 23, 59, 59, 999),
+    );
+  }
+
+  /**
+   * Return rented periods from DTO as dates from day start and day ending
+   */
+  private rentedPeriodsToDates(
+    dto: Partial<Pick<CreateReservationDto, 'rentedFrom' | 'rentedTo'>>,
+  ): ReservationPeriod {
+    const { rentedFrom, rentedTo } = dto;
+
+    return {
+      rentedFrom: rentedFrom && this.startOfDayUTC(rentedFrom),
+      rentedTo: rentedTo && this.endOfDayUTC(rentedTo),
+    };
   }
 }
