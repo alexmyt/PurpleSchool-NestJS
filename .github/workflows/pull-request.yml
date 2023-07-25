@@ -30,14 +30,6 @@ jobs:
     needs: unit-tests
     runs-on: ubuntu-latest
 
-    env:
-      APP_NAME: 'AirBnB3'
-      APP_PORT: 3000
-      MONGODB_URI: 'mongodb://mongo:27017'
-      MONGODB_DBNAME: 'airbnb3-test'
-      MONGODB_USER: ''
-      MONGODB_PASS: ''
-            
     services:
       mongo:
         image: mongo
@@ -59,4 +51,11 @@ jobs:
 
       - name: Run tests
         run: npm run test:e2e
-        
+        env:
+          APP_NAME: 'AirBnB3'
+          APP_PORT: 3000
+          MONGODB_URI: 'mongodb://mongo:27017'
+          MONGODB_DBNAME: 'airbnb3-test'
+          MONGODB_USER: ''
+          MONGODB_PASS: ''
+            
