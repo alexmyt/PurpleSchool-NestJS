@@ -38,19 +38,29 @@ describe('Rooms controller (e2e)', () => {
       .post('/auth/login')
       .send({ email: testUsers.admin.email, password: testUsers.admin.password })
       .expect(200)
-      .then(({ body }) => {
-        testAdminId = body.user.id;
-        testAdminToken = body.accessToken;
-      });
+      .then(
+        ({ body }) => {
+          testAdminId = body.user.id;
+          testAdminToken = body.accessToken;
+        },
+        reason => {
+          throw new Error(reason);
+        },
+      );
 
     await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: testUsers.user.email, password: testUsers.user.password })
       .expect(200)
-      .then(({ body }) => {
-        testUserToken = body.accessToken;
-        testUserId = body.user.id;
-      });
+      .then(
+        ({ body }) => {
+          testUserToken = body.accessToken;
+          testUserId = body.user.id;
+        },
+        reason => {
+          throw new Error(reason);
+        },
+      );
 
     const roomsService = app.get(RoomsService);
     testAdminRoom = await roomsService.create({ ...fakeRoom(), userId: testAdminId });
@@ -62,8 +72,11 @@ describe('Rooms controller (e2e)', () => {
     if (roomId) {
       await roomsService.remove(roomId);
     }
-    await roomsService.remove(testAdminRoom._id.toHexString());
-    await roomsService.remove(testUserRoom._id.toHexString());
+
+    if (testAdminRoom) await roomsService.remove(testAdminRoom._id.toHexString());
+
+    if (testUserRoom) await roomsService.remove(testUserRoom._id.toHexString());
+
     disconnect();
   });
 
