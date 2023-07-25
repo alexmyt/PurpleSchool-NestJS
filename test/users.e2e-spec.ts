@@ -176,11 +176,11 @@ describe('Users controller (e2e)', () => {
   });
 
   it('should update password from yourself, PATCH /users/:id/password', () => {
-    const updateDto = { oldPassword: testUsers.user.password, password: 'newPassword' };
+    const updateDto = { oldPassword: createUserDto.password, password: 'newPassword' };
 
     return request(app.getHttpServer())
-      .patch(`/users/${testUserId}/password`)
-      .auth(testUserToken, { type: 'bearer' })
+      .patch(`/users/${createdUserId}/password`)
+      .auth(createdUserToken, { type: 'bearer' })
       .send(updateDto)
       .expect(200);
   });

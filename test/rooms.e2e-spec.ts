@@ -38,29 +38,19 @@ describe('Rooms controller (e2e)', () => {
       .post('/auth/login')
       .send({ email: testUsers.admin.email, password: testUsers.admin.password })
       .expect(200)
-      .then(
-        ({ body }) => {
-          testAdminId = body.user.id;
-          testAdminToken = body.accessToken;
-        },
-        reason => {
-          throw new Error(reason);
-        },
-      );
+      .then(({ body }) => {
+        testAdminId = body.user.id;
+        testAdminToken = body.accessToken;
+      });
 
     await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: testUsers.user.email, password: testUsers.user.password })
       .expect(200)
-      .then(
-        ({ body }) => {
-          testUserToken = body.accessToken;
-          testUserId = body.user.id;
-        },
-        reason => {
-          throw new Error(reason);
-        },
-      );
+      .then(({ body }) => {
+        testUserToken = body.accessToken;
+        testUserId = body.user.id;
+      });
 
     const roomsService = app.get(RoomsService);
     testAdminRoom = await roomsService.create({ ...fakeRoom(), userId: testAdminId });
