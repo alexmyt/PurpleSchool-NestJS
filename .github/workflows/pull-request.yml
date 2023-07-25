@@ -8,7 +8,7 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
     steps:
-      - name: Build and test
+      - name: Checkout
         uses: actions/checkout@v3
 
       - name: Setup Node.js
@@ -30,23 +30,8 @@ jobs:
     needs: unit-tests
     runs-on: ubuntu-latest
 
-    services:
-      mongo:
-        image: mongo
-        env:
-          MONGO_INITDB_ROOT_USERNAME: test
-          MONGO_INITDB_ROOT_PASSWORD: test
-          MONGO_INITDB_DATABASE: test
-        options: >-
-          --health-cmd mongo
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - "27017:27017"
-    
     steps:
-      - name: Build and test
+      - name: Checkout
         uses: actions/checkout@v3
 
       - name: Setup Node.js
@@ -57,6 +42,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Start MongoDB
+        uses: supercharge/mongodb-github-action@1.8.0
 
       - name: Run tests
         run: npm run test:e2e
