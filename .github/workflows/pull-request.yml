@@ -46,8 +46,6 @@ jobs:
       - name: Start MongoDB
         uses: supercharge/mongodb-github-action@1.8.0
         with:
-          mongodb-username: test
-          mongodb-password: test
           mongodb-db: test
   
       - name: Run tests
@@ -57,6 +55,6 @@ jobs:
           APP_PORT: 3000
           MONGODB_URI: 'mongodb://localhost:27017'
           MONGODB_DBNAME: 'test'
-          MONGODB_USER: 'test'
-          MONGODB_PASS: 'test'
+          JWT_SECRET: 'secret'
+          JWT_ACCESS_EXPIRE: 1d
             
