@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  unit-tests:
     runs-on: ubuntu-latest
     steps:
       - name: Build and test
@@ -27,13 +27,13 @@ jobs:
         run: npm run lint
 
   integration-tests:
-    needs: build
+    needs: unit-tests
     runs-on: ubuntu-latest
 
     env:
       APP_NAME: 'AirBnB3'
       APP_PORT: 3000
-      MONGODB_URI: 'mongodb://mongo'
+      MONGODB_URI: 'mongodb://mongo:27017'
       MONGODB_DBNAME: 'airbnb3-test'
       MONGODB_USER: ''
       MONGODB_PASS: ''
@@ -41,7 +41,9 @@ jobs:
     services:
       mongo:
         image: mongo
-
+        ports:
+          - "27017:27017"
+    
     steps:
       - name: Build and test
         uses: actions/checkout@v3
