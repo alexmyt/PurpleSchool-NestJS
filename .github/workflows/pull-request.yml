@@ -25,3 +25,36 @@ jobs:
       
       - name: Rin lint
         run: npm run lint
+
+  integration-tests:
+    needs: build
+    runs-on: ubuntu-latest
+
+    env:
+      APP_NAME: 'AirBnB3'
+      APP_PORT: 3000
+      MONGODB_URI: 'mongodb://mongo'
+      MONGODB_DBNAME: 'airbnb3-test'
+      MONGODB_USER: ''
+      MONGODB_PASS: ''
+            
+    services:
+      mongo:
+        image: mongo
+
+    steps:
+      - name: Build and test
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test:e2e
+        
