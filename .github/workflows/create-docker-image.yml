@@ -3,7 +3,9 @@ name: Create a Docker Image and publish it to Github registry
 on:
   workflow_dispatch:
   push:
-  pull_request:
+    branches:
+      - 'main'
+      - 'develop'
 
 env:
   REGISTRY: ghcr.io
