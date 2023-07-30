@@ -57,10 +57,6 @@ export class RoomsService {
     return result.length ? result[0] : null;
   }
 
-  findOneByIdAggregated(id: string) {
-    return this.roomModel.findById(id).populate({ path: 'userId', select: 'name' }).exec();
-  }
-
   update(id: string, updateRoomDto: UpdateRoomDto): Promise<RoomModel> {
     return this.roomModel
       .findByIdAndUpdate(id, updateRoomDto, { returnDocument: 'after' })
@@ -75,6 +71,7 @@ export class RoomsService {
       .exec();
   }
 
+  /** Removing a room record from the database - for now only for testing */
   remove(id: string): Promise<RoomModel | null> {
     return this.roomModel.findByIdAndDelete(id, { lean: true }).exec();
   }
