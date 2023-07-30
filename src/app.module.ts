@@ -1,4 +1,8 @@
+import { resolve } from 'path';
+
 import { Module } from '@nestjs/common';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { ConfigService } from '@nestjs/config';
 
 import { RoomsModule } from './modules/rooms/rooms.module';
 import { ConfigModule } from './lib/config/config.module';
@@ -7,6 +11,7 @@ import { ReservationsModule } from './modules/reservations/reservations.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CaslModule } from './lib/casl/casl.module';
+import { IConfig } from './lib/config/config.interface';
 
 @Module({
   imports: [
@@ -17,6 +22,13 @@ import { CaslModule } from './lib/casl/casl.module';
     RoomsModule,
     ReservationsModule,
     CaslModule,
+    ServeStaticModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService<IConfig>) => {
+        const uploadDir = configService.getOrThrow('storage.uploadDir', { infer: true });
+        return [{ rootPath: resolve(uploadDir) }];
+      },
+    }),
   ],
   providers: [],
 })

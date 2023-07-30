@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
+import { StorageService } from '../../lib/storage/storage.service';
+
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { RoomModel, RoomModelDocument } from './room.model';
@@ -9,7 +11,10 @@ import { RoomEntity } from './rooms.service.interfaces';
 
 @Injectable()
 export class RoomsService {
-  constructor(@InjectModel(RoomModel.name) private roomModel: Model<RoomModel>) {}
+  constructor(
+    @InjectModel(RoomModel.name) private roomModel: Model<RoomModel>,
+    private readonly fileStorage: StorageService,
+  ) {}
 
   create(createRoomDto: CreateRoomDto): Promise<RoomModelDocument> {
     return this.roomModel.create(createRoomDto);
@@ -51,6 +56,9 @@ export class RoomsService {
           },
         },
         { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+        {
+          $lookup: { from: 'files', localField: '_id', foreignField: 'owner', as: 'images' },
+        },
       ])
       .exec();
 
