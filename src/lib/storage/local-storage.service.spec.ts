@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { ensureDir, writeFile, remove } from 'fs-extra';
 
 import { LocalStorageService } from './local-storage.service';
-import { FileUploadSource, FileUploadResult } from './storage.interface';
+import { FileUploadSource, FileMetadata } from './storage.interface';
 
 // Mock the ConfigService
 class MockConfigService {
@@ -56,7 +56,7 @@ describe('LocalStorageService', () => {
 
       const expectedDir = new Date().toISOString().slice(0, 10);
 
-      const result: FileUploadResult = await localStorageService.upload(file);
+      const result: FileMetadata = await localStorageService.upload(file);
 
       expect(result).toEqual({
         url: expect.stringContaining(file.filename),
@@ -72,9 +72,14 @@ describe('LocalStorageService', () => {
 
   describe('delete', () => {
     it('should delete a file', async () => {
-      const filename = 'test_123.txt';
+      const fileMetadata = {
+        filename: 'test_123.txt',
+        originalname: '',
+        _id: '',
+        url: '',
+      };
 
-      await localStorageService.delete(filename);
+      await localStorageService.delete(fileMetadata);
 
       expect(remove).toHaveBeenCalledTimes(1);
     });

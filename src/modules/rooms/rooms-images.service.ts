@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import sharp from 'sharp';
+import * as sharp from 'sharp';
 
-import { FileUploadResult } from '../../lib/storage/storage.interface';
+import { FileMetadata } from '../../lib/storage/storage.interface';
 import { StorageService } from '../../lib/storage/storage.service';
 
 import { RoomModel } from './room.model';
@@ -17,7 +17,7 @@ export class RoomsImagesService {
     private readonly fileStorage: StorageService,
   ) {}
 
-  async uploadImages(roomId: string, images: Express.Multer.File[]): Promise<FileUploadResult[]> {
+  async uploadImages(roomId: string, images: Express.Multer.File[]): Promise<FileMetadata[]> {
     const room = await this.roomModel.findById(new Types.ObjectId(roomId)).lean().exec();
     if (!room) {
       throw new NotFoundException(ROOM_NOT_FOUND);

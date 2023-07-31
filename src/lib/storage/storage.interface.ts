@@ -1,5 +1,6 @@
 export enum StorageType {
   LOCAL = 'local',
+  S3 = 's3',
 }
 
 export interface FileUploadOptions {
@@ -12,7 +13,7 @@ export type FileUploadSource = {
   filename: string;
 };
 
-export type FileUploadResult = {
+export type FileMetadata = {
   url: string;
   /** Directory to which this file was uploaded */
   destination?: string;
@@ -23,6 +24,6 @@ export type FileUploadResult = {
 };
 
 export interface FileStorageService {
-  upload(file: FileUploadSource): Promise<FileUploadResult>;
-  delete(filename: string): Promise<void>;
+  upload(file: FileUploadSource): Promise<FileMetadata>;
+  delete(fileMetadata: FileMetadata): Promise<void>;
 }

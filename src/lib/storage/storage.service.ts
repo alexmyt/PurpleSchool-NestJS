@@ -10,13 +10,14 @@ import { IConfig } from '../config/config.interface';
 
 import {
   FileUploadOptions,
-  FileUploadResult,
+  FileMetadata,
   FileUploadSource,
   StorageType,
 } from './storage.interface';
-import { LocalStorageService } from './local-storage.service';
 import { StorageModel } from './storage.model';
 import { FILE_ID_NOT_FOUND, STORAGE_NOT_IMPLEMENTED } from './storage.constants';
+import { LocalStorageService } from './local-storage.service';
+import { S3StorageService } from './s3-storage.service';
 
 @Injectable()
 export class StorageService {
@@ -27,14 +28,14 @@ export class StorageService {
     @InjectModel(StorageModel.name) private readonly storageModel: Model<StorageModel>,
     private readonly moduleRef: ModuleRef,
   ) {
-    this.defaultStorageType = configService.get('storage.type', { infer: true });
+    this.defaultStorageType = configService.get('storage.defaultType', { infer: true });
   }
 
   async upload(
     file: FileUploadSource,
     owner: string | Types.ObjectId,
     options?: FileUploadOptions,
-  ): Promise<FileUploadResult> {
+  ): Promise<FileMetadata> {
     const document = new this.storageModel({
       owner: new Types.ObjectId(owner),
       originalname: file.originalname,
@@ -64,8 +65,8 @@ export class StorageService {
   async uploadMany(
     files: FileUploadSource[],
     owner: string | Types.ObjectId,
-  ): Promise<FileUploadResult[]> {
-    const uploadedFiles: FileUploadResult[] = [];
+  ): Promise<FileMetadata[]> {
+    const uploadedFiles: FileMetadata[] = [];
 
     for (const file of files) {
       const uploadedFile = await this.upload(file, owner);
@@ -82,7 +83,7 @@ export class StorageService {
     }
 
     const fileStorageService = this.getFileStorageService(document.storageType);
-    await fileStorageService.delete(document.url);
+    await fileStorageService.delete(document);
     document.deleteOne();
   }
 
@@ -90,6 +91,8 @@ export class StorageService {
     switch (storageType) {
       case StorageType.LOCAL:
         return this.moduleRef.get(LocalStorageService);
+      case StorageType.S3:
+        return this.moduleRef.get(S3StorageService);
       default:
         throw new Error(`${STORAGE_NOT_IMPLEMENTED}: ${this.defaultStorageType}`);
     }

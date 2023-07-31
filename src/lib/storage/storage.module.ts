@@ -4,6 +4,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { StorageService } from './storage.service';
 import { StorageModel, StorageModelSchema } from './storage.model';
 import { LocalStorageService } from './local-storage.service';
+import { S3StorageService } from './s3-storage.service';
 
 @Module({
   imports: [
@@ -12,6 +13,6 @@ import { LocalStorageService } from './local-storage.service';
     ]),
   ],
   exports: [StorageService],
-  providers: [StorageService, LocalStorageService],
+  providers: [StorageService, LocalStorageService, S3StorageService],
 })
 export class StorageModule {}

@@ -6,6 +6,7 @@ import {
   ParseFilePipe,
   FileTypeValidator,
   Delete,
+  HttpCode,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 
@@ -35,6 +36,7 @@ export class RoomsImagesController {
   }
 
   @Delete(':id/images/:imageId')
+  @HttpCode(204)
   @CheckAbility(RoomModel, RoomsSubjectHook, Action.UPDATE)
   async deleteImage(@MongoIdParam('id') id: string, @MongoIdParam('imageId') imageId: string) {
     return this.roomsImagesService.deleteImage(id, imageId);
