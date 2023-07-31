@@ -37,7 +37,7 @@ describe('LocalStorageService', () => {
         {
           provide: ConfigService,
           useValue: new MockConfigService({
-            'storage.uploadDir': '/uploads',
+            'storage.local.uploadDir': '/uploads',
           }),
         },
       ],
