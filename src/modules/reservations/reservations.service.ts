@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
 import { RoomsService } from '../rooms/rooms.service';
+import { TelegramService } from '../../lib/telegram/telegram.service';
 
 import { ReservationModel, ReservationModelDocument } from './reservation.model';
 import { CreateReservationDto } from './dto/create-reservation.dto';
@@ -20,6 +21,7 @@ export class ReservationsService {
   constructor(
     @InjectModel(ReservationModel.name) private readonly reservationModel: Model<ReservationModel>,
     private readonly roomsService: RoomsService,
+    private readonly telegramService: TelegramService,
   ) {}
 
   async create(createScheduleDto: CreateReservationDto): Promise<ReservationModelDocument> {
@@ -38,12 +40,21 @@ export class ReservationsService {
       throw new ConflictException();
     }
 
-    return this.reservationModel.create({
+    const result = await this.reservationModel.create({
       ...createScheduleDto,
       roomId: room._id,
       rentedFrom,
       rentedTo,
     });
+
+    this.telegramService.sendMessage(
+      `\u0000\u2714 <b>Reservation created</b>\n` +
+        `Room: ${room.name}\n` +
+        `Room #: ${room._id}\n` +
+        `Period: ${rentedFrom.toDateString()} - ${rentedTo.toDateString()}`,
+    );
+
+    return result;
   }
 
   findForRoom(roomId: string, dto: FindReservationsDto): Promise<ReservationModel[]> {
@@ -77,11 +88,19 @@ export class ReservationsService {
       .exec();
   }
 
-  cancel(reservationId: string): Promise<ReservationModel | null> {
-    return this.reservationModel
+  async cancel(reservationId: string): Promise<ReservationModel | null> {
+    const result = await this.reservationModel
       .findByIdAndUpdate(reservationId, { isCanceled: true }, { returnDocument: 'after' })
       .lean()
       .exec();
+
+    this.telegramService.sendMessage(
+      `\u0000\u274c <b>Reservation canceled</b>\n` +
+        `Room #: ${result.roomId}\n` +
+        `Period: ${result.rentedFrom.toDateString()} - ${result.rentedTo.toDateString()}`,
+    );
+
+    return result;
   }
 
   delete(reservationId: string): Promise<ReservationModel | null> {
@@ -97,6 +116,7 @@ export class ReservationsService {
 
     const result = await this.reservationModel.findOne().where({
       roomId: new Types.ObjectId(roomId),
+      isCanceled: false,
       $or: [
         { rentedFrom: { $gte: dateFrom, $lte: dateTo } },
         { rentedTo: { $gte: dateFrom, $lte: dateTo } },
