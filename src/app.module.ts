@@ -28,7 +28,8 @@ import { PinoLoggerModule } from './lib/pino.module';
       inject: [ConfigService],
       useFactory: (configService: ConfigService<IConfig>) => {
         const uploadDir = configService.getOrThrow('storage.local.uploadDir', { infer: true });
-        return [{ rootPath: resolve(uploadDir) }];
+        const serveRoot = configService.get('storage.local.serveRoot', { infer: true });
+        return [{ rootPath: resolve(uploadDir), serveRoot }];
       },
     }),
   ],
