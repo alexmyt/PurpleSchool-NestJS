@@ -1,7 +1,7 @@
 import { extname } from 'path';
 
 import { ModuleRef } from '@nestjs/core';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -36,17 +36,17 @@ export class StorageService {
     owner: string | Types.ObjectId,
     options?: FileUploadOptions,
   ): Promise<FileMetadata> {
+    const storageType = options?.storageType || this.defaultStorageType;
+
     const document = new this.storageModel({
       owner: new Types.ObjectId(owner),
       originalname: file.originalname,
-      storageType: this.defaultStorageType,
+      storageType,
     });
 
     const filename = document._id.toHexString().concat(extname(file.originalname));
 
-    const fileStorageService = this.getFileStorageService(
-      options?.storageType || this.defaultStorageType,
-    );
+    const fileStorageService = this.getFileStorageService(storageType);
 
     const result = await fileStorageService.upload({
       ...file,
@@ -57,7 +57,12 @@ export class StorageService {
     document.destination = result.destination;
     document.filename = result.filename;
 
-    await document.save();
+    try {
+      await document.save();
+    } catch (error) {
+      await fileStorageService.delete(document);
+      throw new InternalServerErrorException(error);
+    }
 
     return result;
   }
@@ -68,9 +73,15 @@ export class StorageService {
   ): Promise<FileMetadata[]> {
     const uploadedFiles: FileMetadata[] = [];
 
-    for (const file of files) {
-      const uploadedFile = await this.upload(file, owner);
-      uploadedFiles.push(uploadedFile);
+    try {
+      for (const file of files) {
+        const uploadedFile = await this.upload(file, owner);
+        uploadedFiles.push(uploadedFile);
+      }
+    } catch (error) {
+      // TODO: if we need to load "all or nothing",
+      // then we should delete all files already uploaded and throw an error.
+      // Otherwise we don't have to do anything and should return an array with the files already uploaded
     }
 
     return uploadedFiles;
@@ -84,7 +95,8 @@ export class StorageService {
 
     const fileStorageService = this.getFileStorageService(document.storageType);
     await fileStorageService.delete(document);
-    document.deleteOne();
+
+    document.deleteOne(); // Что если здесь будет ошибка?
   }
 
   private getFileStorageService(storageType: StorageType) {
