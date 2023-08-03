@@ -38,13 +38,8 @@ export class StorageService {
   ): Promise<FileMetadata> {
     const storageType = options?.storageType || this.defaultStorageType;
 
-    const document = new this.storageModel({
-      owner: new Types.ObjectId(owner),
-      originalname: file.originalname,
-      storageType,
-    });
-
-    const filename = document._id.toHexString().concat(extname(file.originalname));
+    const documentId = new Types.ObjectId();
+    const filename = documentId.toHexString().concat(extname(file.originalname));
 
     const fileStorageService = this.getFileStorageService(storageType);
 
@@ -53,12 +48,18 @@ export class StorageService {
       filename,
     });
 
-    document.url = result.url;
-    document.destination = result.destination;
-    document.filename = result.filename;
+    const document = {
+      _id: documentId,
+      owner: new Types.ObjectId(owner),
+      storageType,
+      originalname: file.originalname,
+      url: result.url,
+      destination: result.destination,
+      filename,
+    };
 
     try {
-      await document.save();
+      this.storageModel.create(document);
     } catch (error) {
       await fileStorageService.delete(document);
       throw new InternalServerErrorException(error);
