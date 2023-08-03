@@ -13,6 +13,10 @@ export class TelegramService {
   }
 
   async sendMessage(message: string, chatId = this.options.chatId) {
+    if (!chatId) {
+      return;
+    }
+
     await this.bot.telegram.sendMessage(chatId, message, { parse_mode: 'HTML' });
   }
 }
