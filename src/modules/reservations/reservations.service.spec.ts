@@ -3,6 +3,7 @@ import { getModelToken } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
 
 import { RoomsService } from '../rooms/rooms.service';
+import { TelegramService } from '../../lib/telegram/telegram.service';
 
 import { ReservationModel } from './reservation.model';
 import { ReservationsService } from './reservations.service';
@@ -20,6 +21,9 @@ describe('ReservationService', () => {
   const mockRoomsService = {
     findOneById: jest.fn(() => ({ where, lean: () => exec })),
   };
+  const mockTelegramService = {
+    sendMessage: jest.fn(),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -29,6 +33,7 @@ describe('ReservationService', () => {
         ReservationsService,
         { provide: getModelToken(ReservationModel.name), useValue: mockReservationModel },
         { provide: RoomsService, useValue: mockRoomsService },
+        { provide: TelegramService, useValue: mockTelegramService },
       ],
     }).compile();
 
