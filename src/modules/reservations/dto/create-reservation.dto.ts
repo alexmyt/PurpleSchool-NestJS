@@ -12,6 +12,9 @@ export class CreateReservationDto {
   @IsMongoId()
   roomId: string;
 
+  @IsMongoId()
+  userId: string;
+
   @IsNotEmpty()
   @Matches(/\d\d\d\d-\d\d-\d\d/)
   @IsDateString({ strict: true })
@@ -24,5 +27,5 @@ export class CreateReservationDto {
 
   @IsOptional()
   @IsBoolean()
-  isCanceled: boolean;
+  isCanceled?: boolean;
 }

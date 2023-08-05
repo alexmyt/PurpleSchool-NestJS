@@ -5,6 +5,7 @@ export const AppUtils = {
     return {
       transform: true,
       whitelist: true,
+      forbidNonWhitelisted: true,
       ...pipeOptions,
     };
   },

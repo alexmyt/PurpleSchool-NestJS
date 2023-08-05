@@ -1,13 +1,14 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Document, Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
 
 import { RoomsService } from '../rooms/rooms.service';
 
-import { ReservationModel } from './reservation.model';
+import { ReservationModel, ReservationModelDocument } from './reservation.model';
 import { CreateReservationDto } from './dto/create-reservation.dto';
-import { GetReservationDto } from './dto/get-reservation.dto';
+import { FindReservationsDto } from './dto/find-reservations.dto';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
+import { ReservationEntity, ReservationStatisticsByRoom } from './reservations.service.interfaces';
 
 export interface ReservationPeriod {
   rentedFrom: Date;
@@ -21,7 +22,7 @@ export class ReservationsService {
     private readonly roomsService: RoomsService,
   ) {}
 
-  async create(createScheduleDto: CreateReservationDto): Promise<Document<ReservationModel>> {
+  async create(createScheduleDto: CreateReservationDto): Promise<ReservationModelDocument> {
     const { roomId } = createScheduleDto;
 
     const room = await this.roomsService.findOneById(roomId);
@@ -31,34 +32,43 @@ export class ReservationsService {
 
     const { rentedFrom, rentedTo } = this.rentedPeriodsToDates(createScheduleDto);
 
-    const currentRoomReservations = await this.getRoomReservations(room.id, {
-      rentedFrom,
-      rentedTo,
-    });
+    const isReserved = await this.isReserved(roomId, rentedFrom, rentedTo);
 
-    if (currentRoomReservations.length) {
+    if (isReserved) {
       throw new ConflictException();
     }
 
     return this.reservationModel.create({
+      ...createScheduleDto,
       roomId: room._id,
       rentedFrom,
       rentedTo,
     });
   }
 
-  findForRoom(roomId: string, dto: GetReservationDto): Promise<Document<ReservationModel>[]> {
+  findForRoom(roomId: string, dto: FindReservationsDto): Promise<ReservationModel[]> {
     return this.getRoomReservations(roomId, this.rentedPeriodsToDates(dto));
   }
 
-  findOneById(reservationId: string): Promise<Document<ReservationModel> | null> {
-    return this.reservationModel.findById(reservationId).lean().exec();
+  async findOneById(reservationId: string): Promise<ReservationEntity | null> {
+    const result = await this.reservationModel
+      .aggregate()
+      .match({ _id: new Types.ObjectId(reservationId) })
+      .lookup({
+        from: 'users',
+        let: { userId: '$userId' },
+        pipeline: [{ $match: { $expr: { $eq: ['$_id', '$$userId'] } } }, { $project: { name: 1 } }],
+        as: 'user',
+      })
+      .unwind({ path: '$user', preserveNullAndEmptyArrays: true })
+      .lookup({ from: 'rooms', localField: 'roomId', foreignField: '_id', as: 'room' })
+      .unwind({ path: '$room', preserveNullAndEmptyArrays: true })
+      .exec();
+
+    return result.length ? result[0] : null;
   }
 
-  async update(
-    reservationId: string,
-    dto: UpdateReservationDto,
-  ): Promise<Document<ReservationModel> | null> {
+  async update(reservationId: string, dto: UpdateReservationDto): Promise<ReservationModel | null> {
     const { rentedFrom, rentedTo, ...rest } = dto;
     const rentedPeriod = this.rentedPeriodsToDates({ rentedFrom, rentedTo });
     return this.reservationModel
@@ -67,11 +77,34 @@ export class ReservationsService {
       .exec();
   }
 
-  delete(reservationId: string): Promise<Document<ReservationModel> | null> {
+  cancel(reservationId: string): Promise<ReservationModel | null> {
     return this.reservationModel
-      .findByIdAndDelete(reservationId, { returnDocument: 'after' })
+      .findByIdAndUpdate(reservationId, { isCanceled: true }, { returnDocument: 'after' })
       .lean()
       .exec();
+  }
+
+  delete(reservationId: string): Promise<ReservationModel | null> {
+    return this.reservationModel.findByIdAndDelete(reservationId).lean().exec();
+  }
+
+  /**
+   * Return true if room has been reserved in period
+   */
+  async isReserved(roomId: string, from: string | Date, to: string | Date): Promise<boolean> {
+    const dateFrom = this.startOfDayUTC(from);
+    const dateTo = this.endOfDayUTC(to);
+
+    const result = await this.reservationModel.findOne().where({
+      roomId: new Types.ObjectId(roomId),
+      $or: [
+        { rentedFrom: { $gte: dateFrom, $lte: dateTo } },
+        { rentedTo: { $gte: dateFrom, $lte: dateTo } },
+        { rentedFrom: { $lt: dateFrom }, rentedTo: { $gt: dateTo } },
+      ],
+    });
+
+    return result !== null;
   }
 
   /**
@@ -80,7 +113,7 @@ export class ReservationsService {
   async getRoomReservations(
     roomId: string,
     period?: Partial<ReservationPeriod>,
-  ): Promise<Document<ReservationModel>[]> {
+  ): Promise<ReservationModel[]> {
     const query = this.reservationModel.find({
       roomId: new Types.ObjectId(roomId),
       isCanceled: false,
@@ -111,15 +144,85 @@ export class ReservationsService {
   }
 
   /**
+   * Return reservations statistics by room in the period
+   */
+  async getRoomsStatistics(from: string, to: string): Promise<ReservationStatisticsByRoom[]> {
+    // From day start
+    const dateFrom = this.startOfDayUTC(from);
+    // To day end
+    const dateTo = this.endOfDayUTC(to);
+
+    const result = await this.reservationModel
+      .aggregate()
+      // Get all reservations which included (fully or partial) to requested period
+      .match({
+        $or: [
+          { rentedFrom: { $gte: dateFrom, $lte: dateTo } },
+          { rentedTo: { $gte: dateFrom, $lte: dateTo } },
+          { rentedFrom: { $lt: dateFrom }, rentedTo: { $gt: dateTo } },
+        ],
+      })
+      // Trim reservation periods to requested period
+      .addFields({
+        rentedFrom: { $max: [dateFrom, '$rentedFrom'] },
+        rentedTo: { $min: [dateTo, '$rentedTo'] },
+      })
+      // Setting dates to the beginning of days to help MongoDB count full days
+      .addFields({
+        // rentedFrom - start of the day
+        rentedFrom: { $dateTrunc: { date: '$rentedFrom', unit: 'day' } },
+        // rentedTo - start of the next day
+        rentedTo: {
+          $dateTrunc: {
+            date: { $dateAdd: { startDate: '$rentedTo', unit: 'day', amount: 1 } },
+            unit: 'day',
+          },
+        },
+      })
+      // Count days in periods
+      .addFields({
+        bookedDaysCount: {
+          $dateDiff: { startDate: '$rentedFrom', endDate: '$rentedTo', unit: 'day' },
+        },
+      })
+      // Group results by room and booked days count
+      .group({ _id: '$roomId', bookedDaysCount: { $sum: '$bookedDaysCount' } })
+      // Add rooms data
+      .lookup({ from: 'rooms', as: 'room', localField: '_id', foreignField: '_id' })
+      // Convert field 'room' from array of objects to a single object
+      .unwind('$room')
+      .project({ roomId: '$_id', bookedDaysCount: 1, room: 1 })
+      .project({ _id: 0 })
+      .exec();
+
+    return result;
+  }
+
+  private startOfDayUTC(date: string | number | Date): Date {
+    const localDate = new Date(date);
+    return new Date(
+      Date.UTC(localDate.getFullYear(), localDate.getMonth(), localDate.getDate(), 0, 0, 0, 0),
+    );
+  }
+
+  private endOfDayUTC(date: string | number | Date): Date {
+    const localDate = new Date(date);
+    return new Date(
+      Date.UTC(localDate.getFullYear(), localDate.getMonth(), localDate.getDate(), 23, 59, 59, 999),
+    );
+  }
+
+  /**
    * Return rented periods from DTO as dates from day start and day ending
    */
   private rentedPeriodsToDates(
     dto: Partial<Pick<CreateReservationDto, 'rentedFrom' | 'rentedTo'>>,
   ): ReservationPeriod {
     const { rentedFrom, rentedTo } = dto;
+
     return {
-      rentedFrom: dto.rentedFrom && new Date(new Date(rentedFrom).setUTCHours(0, 0, 0, 0)),
-      rentedTo: dto.rentedTo && new Date(new Date(rentedTo).setUTCHours(23, 59, 59, 999)),
+      rentedFrom: rentedFrom && this.startOfDayUTC(rentedFrom),
+      rentedTo: rentedTo && this.endOfDayUTC(rentedTo),
     };
   }
 }

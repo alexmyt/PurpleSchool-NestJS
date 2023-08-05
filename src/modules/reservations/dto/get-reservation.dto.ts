@@ -1,7 +1,6 @@
-import { PickType, PartialType } from '@nestjs/mapped-types';
+import { IsMongoId } from 'class-validator';
 
-import { CreateReservationDto } from './create-reservation.dto';
-
-export class GetReservationDto extends PartialType(
-  PickType(CreateReservationDto, ['rentedFrom', 'rentedTo']),
-) {}
+export class GetReservationDto {
+  @IsMongoId()
+  id: string;
+}
