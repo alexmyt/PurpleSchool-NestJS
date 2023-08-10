@@ -53,6 +53,8 @@ export class StorageService {
       owner: new Types.ObjectId(owner),
       storageType,
       originalname: file.originalname,
+      size: file.size,
+      mimetype: file.mimetype,
       url: result.url,
       destination: result.destination,
       filename,

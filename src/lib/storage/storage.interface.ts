@@ -11,6 +11,8 @@ export type FileUploadSource = {
   originalname: string;
   buffer: Buffer;
   filename: string;
+  size: number;
+  mimetype: string;
 };
 
 export type FileMetadata = {
@@ -21,6 +23,8 @@ export type FileMetadata = {
   filename: string;
   /** original filename */
   originalname: string;
+  size: number;
+  mimetype: string;
 };
 
 export interface FileStorageService {

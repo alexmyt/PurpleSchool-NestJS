@@ -24,6 +24,12 @@ export class StorageModel {
 
   @Prop()
   originalname: string;
+
+  @Prop()
+  size: number;
+
+  @Prop()
+  mimetype: string;
 }
 
 export const StorageModelSchema = SchemaFactory.createForClass(StorageModel);
