@@ -1,7 +1,12 @@
 import { extname } from 'path';
 
 import { ModuleRef } from '@nestjs/core';
-import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  InternalServerErrorException,
+  NotImplementedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -13,6 +18,7 @@ import {
   FileMetadata,
   FileUploadSource,
   StorageType,
+  StorageServices,
 } from './storage.interface';
 import { StorageModel } from './storage.model';
 import { FILE_ID_NOT_FOUND, STORAGE_NOT_IMPLEMENTED } from './storage.constants';
@@ -22,6 +28,11 @@ import { S3StorageService } from './s3-storage.service';
 @Injectable()
 export class StorageService {
   private readonly defaultStorageType: StorageType;
+
+  private storageServices: StorageServices = {
+    [StorageType.LOCAL]: this.moduleRef.get(LocalStorageService),
+    [StorageType.S3]: this.moduleRef.get(S3StorageService),
+  };
 
   constructor(
     private readonly configService: ConfigService<IConfig, true>,
@@ -103,13 +114,10 @@ export class StorageService {
   }
 
   private getFileStorageService(storageType: StorageType) {
-    switch (storageType) {
-      case StorageType.LOCAL:
-        return this.moduleRef.get(LocalStorageService);
-      case StorageType.S3:
-        return this.moduleRef.get(S3StorageService);
-      default:
-        throw new Error(`${STORAGE_NOT_IMPLEMENTED}: ${this.defaultStorageType}`);
+    const storageService = this.storageServices[storageType];
+    if (!storageService) {
+      throw new NotImplementedException(`${STORAGE_NOT_IMPLEMENTED}: ${this.defaultStorageType}`);
     }
+    return storageService;
   }
 }

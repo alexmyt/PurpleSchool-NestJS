@@ -31,3 +31,5 @@ export interface FileStorageService {
   upload(file: FileUploadSource): Promise<FileMetadata>;
   delete(fileMetadata: FileMetadata): Promise<void>;
 }
+
+export type StorageServices = Record<StorageType, FileStorageService>;
