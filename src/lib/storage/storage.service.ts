@@ -3,6 +3,7 @@ import { extname } from 'path';
 import { ModuleRef } from '@nestjs/core';
 import {
   Injectable,
+  Logger,
   NotFoundException,
   InternalServerErrorException,
   NotImplementedException,
@@ -15,13 +16,14 @@ import { IConfig } from '../config/config.interface';
 
 import {
   FileUploadOptions,
-  FileMetadata,
   FileUploadSource,
   StorageType,
   StorageServices,
+  FileUploadResult,
+  fileUploadStatus,
 } from './storage.interface';
 import { StorageModel } from './storage.model';
-import { FILE_ID_NOT_FOUND, STORAGE_NOT_IMPLEMENTED } from './storage.constants';
+import { FILE_ID_NOT_FOUND, FILE_UPLOAD_ERROR, STORAGE_NOT_IMPLEMENTED } from './storage.constants';
 import { LocalStorageService } from './local-storage.service';
 import { S3StorageService } from './s3-storage.service';
 
@@ -33,6 +35,8 @@ export class StorageService {
     [StorageType.LOCAL]: this.moduleRef.get(LocalStorageService),
     [StorageType.S3]: this.moduleRef.get(S3StorageService),
   };
+
+  private readonly logger = new Logger();
 
   constructor(
     private readonly configService: ConfigService<IConfig, true>,
@@ -46,22 +50,22 @@ export class StorageService {
     file: FileUploadSource,
     owner: string | Types.ObjectId,
     options?: FileUploadOptions,
-  ): Promise<FileMetadata> {
-    const storageType = options?.storageType || this.defaultStorageType;
-
+  ): Promise<FileUploadResult> {
     const documentId = new Types.ObjectId();
     const filename = documentId.toHexString().concat(extname(file.originalname));
 
+    const storageType = options?.storageType || this.defaultStorageType;
     const fileStorageService = this.getFileStorageService(storageType);
 
-    const result = await fileStorageService.upload({
-      ...file,
-      filename,
+    const result = await fileStorageService.upload({ ...file, filename }).catch(error => {
+      this.logger.error({ fileStorageService, owner, file }, error);
+      throw new InternalServerErrorException(error);
     });
 
+    const ownerId = owner instanceof Types.ObjectId ? owner : new Types.ObjectId(owner);
     const document = {
       _id: documentId,
-      owner: new Types.ObjectId(owner),
+      owner: ownerId,
       storageType,
       originalname: file.originalname,
       size: file.size,
@@ -71,32 +75,33 @@ export class StorageService {
       filename,
     };
 
-    try {
-      this.storageModel.create(document);
-    } catch (error) {
+    await this.storageModel.create(document).catch(async error => {
       await fileStorageService.delete(document);
+      this.logger.error({ fileStorageService, owner, file }, error);
       throw new InternalServerErrorException(error);
-    }
+    });
 
-    return result;
+    return { status: fileUploadStatus.SUCCESS, ...result, id: documentId.toHexString() };
   }
 
   async uploadMany(
     files: FileUploadSource[],
     owner: string | Types.ObjectId,
-  ): Promise<FileMetadata[]> {
-    const uploadedFiles: FileMetadata[] = [];
+  ): Promise<FileUploadResult[]> {
+    const uploadPromises = files.map(file => this.upload(file, owner));
+    const settledPromises = await Promise.allSettled(uploadPromises);
 
-    try {
-      for (const file of files) {
-        const uploadedFile = await this.upload(file, owner);
-        uploadedFiles.push(uploadedFile);
+    const uploadedFiles = settledPromises.map<FileUploadResult>((res, index) => {
+      if (res.status === 'fulfilled') {
+        return res.value;
+      } else {
+        return {
+          status: fileUploadStatus.FAILED,
+          reason: FILE_UPLOAD_ERROR,
+          originalname: files[index].originalname,
+        };
       }
-    } catch (error) {
-      // TODO: if we need to load "all or nothing",
-      // then we should delete all files already uploaded and throw an error.
-      // Otherwise we don't have to do anything and should return an array with the files already uploaded
-    }
+    });
 
     return uploadedFiles;
   }
@@ -116,7 +121,9 @@ export class StorageService {
   private getFileStorageService(storageType: StorageType) {
     const storageService = this.storageServices[storageType];
     if (!storageService) {
-      throw new NotImplementedException(`${STORAGE_NOT_IMPLEMENTED}: ${this.defaultStorageType}`);
+      const errorMessage = `${STORAGE_NOT_IMPLEMENTED}: ${storageType}`;
+      this.logger.error(errorMessage);
+      throw new NotImplementedException(errorMessage);
     }
     return storageService;
   }

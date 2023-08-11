@@ -27,6 +27,24 @@ export type FileMetadata = {
   mimetype: string;
 };
 
+export enum fileUploadStatus {
+  SUCCESS = 'success',
+  FAILED = 'failed',
+}
+
+interface FileUploadSuccessResult extends FileMetadata {
+  status: fileUploadStatus.SUCCESS;
+  id: string;
+}
+
+interface FileUploadFailedResult {
+  status: fileUploadStatus.FAILED;
+  reason: string;
+  originalname: string;
+}
+
+export type FileUploadResult = FileUploadSuccessResult | FileUploadFailedResult;
+
 export interface FileStorageService {
   upload(file: FileUploadSource): Promise<FileMetadata>;
   delete(fileMetadata: FileMetadata): Promise<void>;

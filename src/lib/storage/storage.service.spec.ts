@@ -1,14 +1,13 @@
-import { extname } from 'path';
-
 import { ModuleRef } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
-import { InternalServerErrorException } from '@nestjs/common';
+import { InternalServerErrorException, NotImplementedException } from '@nestjs/common';
 
 import { StorageService } from './storage.service';
 import { StorageModel } from './storage.model';
-import { FileMetadata, FileUploadSource, StorageType } from './storage.interface';
+import { FileMetadata, FileUploadSource, StorageType, fileUploadStatus } from './storage.interface';
+import { FILE_UPLOAD_ERROR } from './storage.constants';
 
 const mockFile = {
   originalname: 'file1.jpg',
@@ -33,16 +32,18 @@ class MockConfigService {
 }
 
 const mockLocalStorageService = {
-  upload: jest.fn((arg: FileMetadata) => ({ ...arg, url: '' })),
+  upload: jest.fn().mockImplementation((arg: FileMetadata) => Promise.resolve({ ...arg, url: '' })),
   delete: jest.fn(),
 };
 
 const mockModuleRef = {
-  get: jest.fn(() => mockLocalStorageService),
+  get: jest.fn(arg => {
+    if (arg.name === 'LocalStorageService') return mockLocalStorageService;
+  }),
 };
 
 const mockReservationModel = {
-  create: jest.fn(),
+  create: jest.fn().mockResolvedValue({}),
 };
 
 describe('StorageService', () => {
@@ -57,10 +58,7 @@ describe('StorageService', () => {
           provide: ConfigService,
           useValue: new MockConfigService({ 'storage.defaultType': 'local' }),
         },
-        {
-          provide: ModuleRef,
-          useValue: mockModuleRef,
-        },
+        { provide: ModuleRef, useValue: mockModuleRef },
       ],
     }).compile();
 
@@ -88,7 +86,9 @@ describe('StorageService', () => {
 
       const result = await storageService.upload(mockFile, mockOwner);
 
-      expect(result).toEqual(expect.objectContaining(expectedResult));
+      expect(result).toEqual(
+        expect.objectContaining({ ...expectedResult, status: fileUploadStatus.SUCCESS }),
+      );
 
       expect(mockLocalStorageService.upload).toHaveBeenCalledTimes(1);
       expect(mockLocalStorageService.upload).toHaveBeenCalledWith(
@@ -104,10 +104,18 @@ describe('StorageService', () => {
       );
     });
 
+    it('should throw an error if file upload filed', async () => {
+      mockLocalStorageService.upload.mockImplementationOnce(() => Promise.reject(new Error()));
+
+      await expect(storageService.upload(mockFile, mockOwner)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+
+      expect(mockLocalStorageService.upload).toHaveBeenCalledTimes(1);
+    });
+
     it('should throw error and delete file when database operation filed', async () => {
-      mockReservationModel.create.mockImplementationOnce(() => {
-        throw new Error();
-      });
+      mockReservationModel.create.mockImplementationOnce(() => Promise.reject(new Error()));
 
       await expect(storageService.upload(mockFile, mockOwner)).rejects.toThrow(
         InternalServerErrorException,
@@ -137,11 +145,48 @@ describe('StorageService', () => {
       expect(mockLocalStorageService.upload).toHaveBeenCalledTimes(2);
       expect(result).toHaveLength(2);
       expect(result).toEqual([
-        expect.objectContaining({ filename: expectedFilename }),
-        expect.objectContaining({ filename: expectedFilename }),
+        expect.objectContaining({ filename: expectedFilename, status: fileUploadStatus.SUCCESS }),
+        expect.objectContaining({ filename: expectedFilename, status: fileUploadStatus.SUCCESS }),
       ]);
+    });
 
-      expect(result[0].filename).not.toEqual(result[1].filename);
+    it('should return result when one file upload failed', async () => {
+      mockLocalStorageService.upload.mockImplementationOnce(
+        mockLocalStorageService.upload.getMockImplementation(),
+      );
+      mockLocalStorageService.upload.mockImplementationOnce(() =>
+        Promise.reject(new Error('error')),
+      );
+
+      const mockFileArray = [mockFile, mockFile];
+      const expectedFilename = expect.stringMatching(/[0-9abcdef]{24}\.jpg$/i);
+
+      const result = await storageService.uploadMany(mockFileArray, mockOwner);
+
+      expect(result).toHaveLength(2);
+      expect(result).toEqual([
+        expect.objectContaining({ filename: expectedFilename, status: fileUploadStatus.SUCCESS }),
+        expect.objectContaining({
+          originalname: mockFile.originalname,
+          status: fileUploadStatus.FAILED,
+          reason: FILE_UPLOAD_ERROR,
+        }),
+      ]);
+    });
+  });
+
+  describe('getFileStorageService', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    it('should return storage service by type', () => {
+      const result = storageService['getFileStorageService'](StorageType.LOCAL);
+      expect(result).toBeDefined();
+    });
+
+    it('should throw error when type is wrong', () => {
+      expect(() => storageService['getFileStorageService']('wrong' as StorageType)).toThrowError(
+        NotImplementedException,
+      );
     });
   });
 });
