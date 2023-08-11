@@ -36,7 +36,7 @@ export class StorageService {
     [StorageType.S3]: this.moduleRef.get(S3StorageService),
   };
 
-  private readonly logger = new Logger();
+  private readonly logger = new Logger(StorageService.name);
 
   constructor(
     private readonly configService: ConfigService<IConfig, true>,
