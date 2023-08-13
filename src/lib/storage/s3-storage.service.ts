@@ -4,10 +4,17 @@ import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client
 
 import { IConfig } from '../config/config.interface';
 
-import { FileMetadata, FileStorageService, FileUploadSource } from './storage.interface';
+import {
+  FileMetadata,
+  FileStorageService,
+  FileUploadSource,
+  StorageType,
+} from './storage.interface';
 
 @Injectable()
 export class S3StorageService implements FileStorageService {
+  readonly type = StorageType.S3;
+
   private s3Client: S3Client;
 
   private bucket: string;

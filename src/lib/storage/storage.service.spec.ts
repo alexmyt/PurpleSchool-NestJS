@@ -2,7 +2,8 @@ import { ModuleRef } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
-import { InternalServerErrorException, NotImplementedException } from '@nestjs/common';
+import { NotImplementedException } from '@nestjs/common';
+import { Types } from 'mongoose';
 
 import { StorageService } from './storage.service';
 import { StorageModel } from './storage.model';
@@ -32,6 +33,7 @@ class MockConfigService {
 }
 
 const mockLocalStorageService = {
+  type: StorageType.LOCAL,
   upload: jest.fn().mockImplementation((arg: FileMetadata) => Promise.resolve({ ...arg, url: '' })),
   delete: jest.fn(),
 };
@@ -43,7 +45,10 @@ const mockModuleRef = {
 };
 
 const mockReservationModel = {
-  create: jest.fn().mockResolvedValue({}),
+  create: jest.fn().mockReturnValue({
+    _id: new Types.ObjectId(),
+    updateOne: jest.fn().mockReturnValue({ exec: jest.fn() }),
+  }),
 };
 
 describe('StorageService', () => {
@@ -100,15 +105,23 @@ describe('StorageService', () => {
 
       expect(mockReservationModel.create).toHaveBeenCalledTimes(1);
       expect(mockReservationModel.create).toHaveBeenCalledWith(
-        expect.objectContaining({ ...expectedResult, storageType }),
+        expect.objectContaining({
+          originalname: mockFile.originalname,
+          storageType,
+        }),
       );
     });
 
-    it('should throw an error if file upload filed', async () => {
+    it('should throw an error if file upload failed', async () => {
       mockLocalStorageService.upload.mockImplementationOnce(() => Promise.reject(new Error()));
 
-      await expect(storageService.upload(mockFile, mockOwner)).rejects.toThrow(
-        InternalServerErrorException,
+      const result = await storageService.upload(mockFile, mockOwner);
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          status: fileUploadStatus.FAILED,
+          originalname: mockFile.originalname,
+        }),
       );
 
       expect(mockLocalStorageService.upload).toHaveBeenCalledTimes(1);
@@ -117,15 +130,12 @@ describe('StorageService', () => {
     it('should throw error and delete file when database operation filed', async () => {
       mockReservationModel.create.mockImplementationOnce(() => Promise.reject(new Error()));
 
-      await expect(storageService.upload(mockFile, mockOwner)).rejects.toThrow(
-        InternalServerErrorException,
-      );
+      const result = await storageService.upload(mockFile, mockOwner);
 
-      expect(mockLocalStorageService.upload).toHaveBeenCalledTimes(1);
-      expect(mockLocalStorageService.delete).toHaveBeenCalledTimes(1);
-      expect(mockLocalStorageService.delete).toHaveBeenCalledWith(
+      expect(result).toEqual(
         expect.objectContaining({
-          filename: expect.stringMatching(/[0-9abcdef]{24}\.jpg$/i),
+          status: fileUploadStatus.FAILED,
+          originalname: mockFile.originalname,
         }),
       );
     });

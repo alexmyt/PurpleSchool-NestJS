@@ -11,7 +11,7 @@ export class StorageModel {
   storageType: StorageType;
 
   @Prop({ type: MongoSchema.Types.ObjectId, required: true, index: true })
-  owner: string;
+  ownerId: string;
 
   @Prop()
   url: string;
@@ -30,6 +30,12 @@ export class StorageModel {
 
   @Prop()
   mimetype: string;
+
+  @Prop({ default: false })
+  isUploaded: boolean;
+
+  @Prop({ default: false })
+  isDeleted: boolean;
 }
 
 export const StorageModelSchema = SchemaFactory.createForClass(StorageModel);

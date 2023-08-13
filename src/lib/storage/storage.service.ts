@@ -21,9 +21,8 @@ import {
   StorageServices,
   FileUploadResult,
   fileUploadStatus,
-  FileMetadata,
 } from './storage.interface';
-import { StorageModel } from './storage.model';
+import { StorageModel, StorageModelDocument } from './storage.model';
 import { FILE_ID_NOT_FOUND, FILE_UPLOAD_ERROR, STORAGE_NOT_IMPLEMENTED } from './storage.constants';
 import { LocalStorageService } from './local-storage.service';
 import { S3StorageService } from './s3-storage.service';
@@ -48,31 +47,23 @@ export class StorageService {
   }
 
   /**
-   * Upload a file to the specified or the default storage service.
+   * Uploads a file to a storage service.
    */
   async upload(
     file: FileUploadSource,
     fileOwner: string | Types.ObjectId,
     options?: FileUploadOptions,
   ): Promise<FileUploadResult> {
-    const documentId = new Types.ObjectId();
-    const filename = documentId.toHexString().concat(extname(file.originalname));
-
-    const storageType = options?.storageType || this.defaultStorageType;
-    const fileStorageService = this.getFileStorageService(storageType);
-
-    const result = await fileStorageService.upload({ ...file, filename }).catch(error => {
-      this.logger.error({ fileStorageService, owner: fileOwner, file }, error);
-      throw new InternalServerErrorException(error);
-    });
-
-    await this.createFileDocument(documentId, fileOwner, storageType, result).catch(async error => {
-      await fileStorageService.delete(result);
-      this.logger.error({ fileStorageService, owner: fileOwner, file }, error);
-      throw new InternalServerErrorException(error);
-    });
-
-    return { status: fileUploadStatus.SUCCESS, ...result, id: documentId.toHexString() };
+    try {
+      const result = await this.uploadFile(file, fileOwner, options);
+      return result;
+    } catch (error) {
+      return {
+        status: fileUploadStatus.FAILED,
+        reason: FILE_UPLOAD_ERROR,
+        originalname: file.originalname,
+      };
+    }
   }
 
   /**
@@ -83,7 +74,7 @@ export class StorageService {
     owner: string | Types.ObjectId,
     options?: FileUploadOptions,
   ): Promise<FileUploadResult[]> {
-    const uploadPromises = files.map(file => this.upload(file, owner, options));
+    const uploadPromises = files.map(file => this.uploadFile(file, owner, options));
     const settledPromises = await Promise.allSettled(uploadPromises);
 
     const uploadedFiles = settledPromises.map<FileUploadResult>((res, index) => {
@@ -122,9 +113,41 @@ export class StorageService {
   }
 
   /**
+   * Upload a file to the specified or the default storage service.
+   */
+  private async uploadFile(
+    file: FileUploadSource,
+    fileOwner: string | Types.ObjectId,
+    options?: FileUploadOptions,
+  ): Promise<FileUploadResult> {
+    const fileStorageService = this.getFileStorageService(options?.storageType);
+
+    const fileDocument = await this.createFileDocument(
+      fileOwner,
+      fileStorageService.type,
+      file,
+    ).catch(async error => {
+      this.logger.error({ fileStorageService, fileOwner, file }, error);
+      throw new InternalServerErrorException(error);
+    });
+
+    const documentId = fileDocument._id;
+    const filename = documentId.toHexString().concat(extname(file.originalname));
+
+    const result = await fileStorageService.upload({ ...file, filename }).catch(error => {
+      this.logger.error({ fileStorageService, fileOwner, file }, error);
+      throw new InternalServerErrorException(error);
+    });
+
+    await fileDocument.updateOne({ result, isUploaded: true });
+
+    return { status: fileUploadStatus.SUCCESS, ...result, id: documentId.toHexString() };
+  }
+
+  /**
    * Return a specified storage service implementation
    */
-  private getFileStorageService(storageType: StorageType) {
+  private getFileStorageService(storageType = this.defaultStorageType) {
     const storageService = this.storageServices[storageType];
     if (!storageService) {
       const errorMessage = `${STORAGE_NOT_IMPLEMENTED}: ${storageType}`;
@@ -138,15 +161,13 @@ export class StorageService {
    * Create a new record in database for an uploaded file
    */
   private async createFileDocument(
-    _id: Types.ObjectId,
-    ownerId: string | Types.ObjectId,
+    owner: string | Types.ObjectId,
     storageType: StorageType,
-    file: FileMetadata,
-  ): Promise<StorageModel> {
-    const owner = ownerId instanceof Types.ObjectId ? ownerId : new Types.ObjectId(ownerId);
+    file: FileUploadSource,
+  ): Promise<StorageModelDocument> {
+    const ownerId = owner instanceof Types.ObjectId ? owner : new Types.ObjectId(owner);
     const document = {
-      _id,
-      owner,
+      ownerId,
       storageType,
       ...file,
     };

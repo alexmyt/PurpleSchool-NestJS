@@ -46,6 +46,7 @@ interface FileUploadFailedResult {
 export type FileUploadResult = FileUploadSuccessResult | FileUploadFailedResult;
 
 export interface FileStorageService {
+  type: StorageType;
   upload(file: FileUploadSource): Promise<FileMetadata>;
   delete(fileMetadata: FileMetadata): Promise<void>;
 }

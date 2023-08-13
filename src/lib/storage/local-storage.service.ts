@@ -6,10 +6,17 @@ import { ensureDir, writeFile, remove } from 'fs-extra';
 
 import { IConfig } from '../config/config.interface';
 
-import { FileMetadata, FileStorageService, FileUploadSource } from './storage.interface';
+import {
+  FileMetadata,
+  FileStorageService,
+  FileUploadSource,
+  StorageType,
+} from './storage.interface';
 
 @Injectable()
 export class LocalStorageService implements FileStorageService {
+  readonly type = StorageType.LOCAL;
+
   private uploadDir: string;
 
   constructor(private configService: ConfigService<IConfig>) {
