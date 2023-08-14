@@ -35,30 +35,7 @@ export class RoomsImagesService {
     return uploadResults;
   }
 
-  async deleteImage(roomId: string, imageId: string): Promise<void> {
-    const room = await this.roomModel
-      .aggregate<RoomEntity>([
-        { $match: { _id: new Types.ObjectId(roomId) } },
-        {
-          $lookup: {
-            from: 'files',
-            localField: '_id',
-            foreignField: 'owner',
-            as: 'images',
-          },
-        },
-        {
-          $match: {
-            images: { $elemMatch: { _id: new Types.ObjectId(imageId) } },
-          },
-        },
-      ])
-      .exec();
-
-    if (!room.length) {
-      throw new NotFoundException(IMAGE_NOT_FOUND);
-    }
-
-    await this.fileStorage.delete(imageId);
+  deleteImage(roomId: string, imageId: string): Promise<void> {
+    return this.fileStorage.delete(imageId);
   }
 }

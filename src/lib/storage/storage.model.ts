@@ -19,7 +19,7 @@ export class StorageModel {
   @Prop()
   destination: string;
 
-  @Prop({ required: true })
+  @Prop()
   filename: string;
 
   @Prop()

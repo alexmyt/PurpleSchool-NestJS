@@ -57,16 +57,25 @@ export class RoomsService {
         },
         { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
         {
-          $lookup: { from: 'files', localField: '_id', foreignField: 'owner', as: 'images' },
+          $lookup: {
+            from: 'files',
+            let: { ownerId: '$_id' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [{ $eq: ['$ownerId', '$$ownerId'] }, { $eq: ['$isDeleted', false] }],
+                  },
+                },
+              },
+            ],
+            as: 'images',
+          },
         },
       ])
       .exec();
 
     return result.length ? result[0] : null;
-  }
-
-  findOneByIdAggregated(id: string) {
-    return this.roomModel.findById(id).populate({ path: 'userId', select: 'name' }).exec();
   }
 
   update(id: string, updateRoomDto: UpdateRoomDto): Promise<RoomModel> {

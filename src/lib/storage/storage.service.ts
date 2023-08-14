@@ -47,6 +47,29 @@ export class StorageService {
   }
 
   /**
+   * Retrieves files from the storage based on the owner's ID.
+   *
+   * @param owner - The owner ID or Types.ObjectId of the owner.
+   * @param file - Optional. The file ID or Types.ObjectId of the file to filter the results.
+   * @returns A Promise that resolves to an array of StorageModel objects that match the specified criteria.
+   */
+  async getFilesByOwner(
+    owner: string | Types.ObjectId,
+    file?: string | Types.ObjectId,
+  ): Promise<StorageModel[]> {
+    const ownerId = owner instanceof Types.ObjectId ? owner : new Types.ObjectId(owner);
+
+    const req = this.storageModel.find({ ownerId });
+
+    if (file) {
+      const _id = file instanceof Types.ObjectId ? file : new Types.ObjectId(file);
+      req.and([{ _id }]);
+    }
+
+    return await req.lean().exec();
+  }
+
+  /**
    * Uploads a file to a storage service.
    */
   async upload(
@@ -106,10 +129,14 @@ export class StorageService {
       throw new NotFoundException(`${FILE_ID_NOT_FOUND}: ${id}`);
     }
 
+    if (document.isDeleted) {
+      return;
+    }
+
+    await document.updateOne({ isDeleted: true, isUploaded: false }).exec();
+
     const fileStorageService = this.getFileStorageService(document.storageType);
     await fileStorageService.delete(document);
-
-    document.deleteOne(); // Что если здесь будет ошибка?
   }
 
   /**
@@ -127,21 +154,23 @@ export class StorageService {
       fileStorageService.type,
       file,
     ).catch(async error => {
-      this.logger.error({ fileStorageService, fileOwner, file }, error);
+      const { originalname } = file;
+      this.logger.error({ fileStorageService, fileOwner, originalname }, error);
       throw new InternalServerErrorException(error);
     });
 
     const documentId = fileDocument._id;
     const filename = documentId.toHexString().concat(extname(file.originalname));
 
-    const result = await fileStorageService.upload({ ...file, filename }).catch(error => {
-      this.logger.error({ fileStorageService, fileOwner, file }, error);
+    const uploadResult = await fileStorageService.upload({ ...file, filename }).catch(error => {
+      const { originalname } = file;
+      this.logger.error({ fileStorageService, fileOwner, originalname, filename }, error);
       throw new InternalServerErrorException(error);
     });
 
-    await fileDocument.updateOne({ result, isUploaded: true });
+    await fileDocument.updateOne({ ...uploadResult, isUploaded: true });
 
-    return { status: fileUploadStatus.SUCCESS, ...result, id: documentId.toHexString() };
+    return { status: fileUploadStatus.SUCCESS, ...uploadResult, id: documentId.toHexString() };
   }
 
   /**
