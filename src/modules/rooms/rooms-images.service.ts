@@ -7,8 +7,7 @@ import { FileUploadResult } from '../../lib/storage/storage.interface';
 import { StorageService } from '../../lib/storage/storage.service';
 
 import { RoomModel } from './room.model';
-import { ROOM_NOT_FOUND, IMAGE_NOT_FOUND } from './rooms.constants';
-import { RoomEntity } from './rooms.service.interfaces';
+import { ROOM_NOT_FOUND } from './rooms.constants';
 
 @Injectable()
 export class RoomsImagesService {
