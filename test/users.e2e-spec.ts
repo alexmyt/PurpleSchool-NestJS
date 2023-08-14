@@ -84,6 +84,7 @@ describe('Users controller (e2e)', () => {
   });
 
   it('should register a new user, POST /users/register', () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...returnUser } = createUserDto;
 
     return request(app.getHttpServer())
@@ -101,6 +102,7 @@ describe('Users controller (e2e)', () => {
 
   it('should login a created user, POST /auth/login', () => {
     const { email, password } = createUserDto;
+
     return request(app.getHttpServer())
       .post('/auth/login')
       .send({ email, password })
@@ -113,6 +115,7 @@ describe('Users controller (e2e)', () => {
   });
 
   it('should get yourself , GET /users/:id', () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...returnUser } = createUserDto;
 
     return request(app.getHttpServer())
@@ -259,8 +262,9 @@ describe('Users controller (e2e)', () => {
   it('should return 404 when delete user that not exist, DELETE /users/:id', async () => {
     const nonexistingUserId = new Types.ObjectId();
 
-    const result = await request(app.getHttpServer())
+    return request(app.getHttpServer())
       .delete(`/users/${nonexistingUserId}`)
-      .auth(testAdminToken, { type: 'bearer' });
+      .auth(testAdminToken, { type: 'bearer' })
+      .expect(404);
   });
 });
