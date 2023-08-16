@@ -3,13 +3,15 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
 import { RoomsService } from '../rooms/rooms.service';
-import { TelegramService } from '../../lib/telegram/telegram.service';
+import { NotificationsService } from '../../lib/notifications/notifications.service';
+import { NotificationType } from '../../lib/notifications/notifications.interface';
 
 import { ReservationModel, ReservationModelDocument } from './reservation.model';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { FindReservationsDto } from './dto/find-reservations.dto';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
 import { ReservationEntity, ReservationStatisticsByRoom } from './reservations.service.interfaces';
+import { TEMPLATES } from './reservations.constants';
 
 export interface ReservationPeriod {
   rentedFrom: Date;
@@ -21,7 +23,7 @@ export class ReservationsService {
   constructor(
     @InjectModel(ReservationModel.name) private readonly reservationModel: Model<ReservationModel>,
     private readonly roomsService: RoomsService,
-    private readonly telegramService: TelegramService,
+    private readonly notificationService: NotificationsService,
   ) {}
 
   async create(createScheduleDto: CreateReservationDto): Promise<ReservationModelDocument> {
@@ -40,21 +42,20 @@ export class ReservationsService {
       throw new ConflictException();
     }
 
-    const result = await this.reservationModel.create({
+    const reservation = await this.reservationModel.create({
       ...createScheduleDto,
       roomId: room._id,
       rentedFrom,
       rentedTo,
     });
 
-    this.telegramService.sendMessage(
-      `\u0000\u2714 <b>Reservation created</b>\n` +
-        `Room: ${room.name}\n` +
-        `Room #: ${room._id}\n` +
-        `Period: ${rentedFrom.toDateString()} - ${rentedTo.toDateString()}`,
-    );
+    this.notificationService.sendMessage({
+      type: NotificationType.TELEGRAM,
+      templateFile: TEMPLATES.reservationCreated,
+      metadata: { ...reservation.toObject(), room },
+    });
 
-    return result;
+    return reservation;
   }
 
   findForRoom(roomId: string, dto: FindReservationsDto): Promise<ReservationModel[]> {
@@ -89,18 +90,20 @@ export class ReservationsService {
   }
 
   async cancel(reservationId: string): Promise<ReservationModel | null> {
-    const result = await this.reservationModel
+    const reservation = await this.reservationModel
       .findByIdAndUpdate(reservationId, { isCanceled: true }, { returnDocument: 'after' })
       .lean()
       .exec();
 
-    this.telegramService.sendMessage(
-      `\u0000\u274c <b>Reservation canceled</b>\n` +
-        `Room #: ${result.roomId}\n` +
-        `Period: ${result.rentedFrom.toDateString()} - ${result.rentedTo.toDateString()}`,
-    );
+    const room = await this.roomsService.findOneById(reservation.roomId);
 
-    return result;
+    this.notificationService.sendMessage({
+      type: NotificationType.TELEGRAM,
+      templateFile: TEMPLATES.reservationCanceled,
+      metadata: { ...reservation, room },
+    });
+
+    return reservation;
   }
 
   delete(reservationId: string): Promise<ReservationModel | null> {
