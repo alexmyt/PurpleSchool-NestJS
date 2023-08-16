@@ -62,8 +62,11 @@ describe('Rooms controller (e2e)', () => {
     if (roomId) {
       await roomsService.remove(roomId);
     }
-    await roomsService.remove(testAdminRoom._id.toHexString());
-    await roomsService.remove(testUserRoom._id.toHexString());
+
+    if (testAdminRoom) await roomsService.remove(testAdminRoom._id.toHexString());
+
+    if (testUserRoom) await roomsService.remove(testUserRoom._id.toHexString());
+
     disconnect();
   });
 
