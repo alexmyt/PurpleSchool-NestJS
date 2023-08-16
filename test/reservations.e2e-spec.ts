@@ -84,7 +84,8 @@ describe('Reservations controller (e2e)', () => {
     await roomsService.remove(testUserRoom._id.toHexString());
     await reservationsService.delete(testAdminReservation._id.toHexString());
     await reservationsService.delete(testUserReservation._id.toHexString());
-    disconnect();
+    await disconnect();
+    app.close();
   });
 
   it('should not create reservation from unregistered', () => {
