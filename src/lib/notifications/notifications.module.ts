@@ -20,7 +20,7 @@ import { EmailChannel } from './channels/email.channel';
     TelegramModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService<IConfig>) => {
-        const token = configService.getOrThrow('telegram.token', { infer: true });
+        const token = configService.get('telegram.token', { infer: true });
         const chatId = configService.get('telegram.chatId', { infer: true });
 
         return { token, chatId };

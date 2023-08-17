@@ -13,12 +13,12 @@ export class MailerService {
 
   constructor(private configService: ConfigService<IConfig, true>) {
     this.transporter = createTransport({
-      host: configService.getOrThrow('mail.host', { infer: true }),
-      port: configService.getOrThrow('mail.port', { infer: true }),
+      host: configService.get('mail.host', { infer: true }),
+      port: configService.get('mail.port', { infer: true }),
       secure: false,
       auth: {
-        user: configService.getOrThrow('mail.username', { infer: true }),
-        pass: configService.getOrThrow('mail.password', { infer: true }),
+        user: configService.get('mail.username', { infer: true }),
+        pass: configService.get('mail.password', { infer: true }),
       },
       tls: {
         rejectUnauthorized: false,
@@ -28,8 +28,8 @@ export class MailerService {
 
     this.defaultMailOptions = {
       from: {
-        name: this.configService.getOrThrow('app.name', { infer: true }),
-        address: this.configService.getOrThrow('mail.senderEmail', { infer: true }),
+        name: this.configService.get('app.name', { infer: true }),
+        address: this.configService.get('mail.senderEmail', { infer: true }),
       },
     };
   }
