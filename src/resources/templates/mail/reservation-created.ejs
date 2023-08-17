@@ -1,0 +1,10 @@
+<%- include('partials/base_head.ejs') %>
+
+<h2>Reservation created</h2>
+<ul>
+<li>Room: <%= room.name %></li>
+<li>Room #: <%= room._id %></li>
+<li>Period: <%= new Date(rentedFrom).toDateString() %> - <%= new Date(rentedTo).toDateString() %></li>
+</ul>
+
+<%- include('partials/base_tail.ejs') %>

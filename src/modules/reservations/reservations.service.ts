@@ -103,6 +103,14 @@ export class ReservationsService {
       metadata: { ...reservation, room },
     });
 
+    this.notificationService.sendMessage({
+      type: NotificationType.EMAIL,
+      to: 'test@dot.com',
+      subject: 'Test',
+      templateFile: TEMPLATES.reservationCanceled,
+      metadata: { ...reservation, room },
+    });
+
     return reservation;
   }
 

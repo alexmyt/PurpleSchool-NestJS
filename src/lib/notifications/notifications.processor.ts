@@ -5,10 +5,14 @@ import { Job } from 'bullmq';
 import { NOTIFICATIONS_QUEUE_NAME } from './notifications.constants';
 import { NotificationServiceMessage, NotificationType } from './notifications.interface';
 import { TelegramChannel } from './channels/telegram.channel';
+import { EmailChannel } from './channels/email.channel';
 
 @Processor(NOTIFICATIONS_QUEUE_NAME)
 export class NotificationsProcessor extends WorkerHost {
-  constructor(private readonly telegramChannel: TelegramChannel) {
+  constructor(
+    private readonly telegramChannel: TelegramChannel,
+    private readonly emailChannel: EmailChannel,
+  ) {
     super();
   }
 
@@ -18,7 +22,7 @@ export class NotificationsProcessor extends WorkerHost {
     if (data.type === NotificationType.TELEGRAM) {
       this.telegramChannel.processMessage(data);
     } else if (data.type === NotificationType.EMAIL) {
-      throw new NotImplementedException();
+      this.emailChannel.processMessage(data);
     } else {
       throw new NotImplementedException();
     }

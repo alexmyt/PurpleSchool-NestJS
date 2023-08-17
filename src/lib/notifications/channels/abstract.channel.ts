@@ -1,4 +1,4 @@
-import { resolve, join } from 'node:path';
+import { resolve } from 'node:path';
 
 import { Logger } from '@nestjs/common';
 import { readFile } from 'fs-extra';
@@ -9,7 +9,7 @@ interface AbstractChannelConfig {
   templateDir: string;
 }
 
-export class AbstractChannel {
+export abstract class AbstractChannel {
   private logger: Logger;
   private templateDir: string;
   private templateCache: Map<string, string> = new Map();
@@ -19,14 +19,21 @@ export class AbstractChannel {
     this.templateDir = config.templateDir;
   }
 
+  abstract processMessage(message: unknown): Promise<void>;
+
   public async renderTemplateFile(
     filename: string,
     metadata: Record<string, unknown>,
   ): Promise<string> {
-    const template = await this.templateFromCacheOrFile(filename);
+    const absolutePathFileName = resolve(
+      `${__dirname}/../../..`,
+      this.templateDir,
+      `${filename}.ejs`,
+    );
+    const template = await this.templateFromCacheOrFile(absolutePathFileName);
 
     try {
-      return ejs.render(template, metadata);
+      return ejs.render(template, metadata, { filename: absolutePathFileName });
     } catch (error) {
       this.LogAndThrowError({ template, metadata }, error);
     }
@@ -43,17 +50,14 @@ export class AbstractChannel {
   }
 
   private async templateFromCacheOrFile(filename: string): Promise<string> {
-    const filenameWithPath = join(this.templateDir, `${filename}.ejs`);
-
-    let template = this.templateCache.get(filenameWithPath);
+    let template = this.templateCache.get(filename);
 
     if (!template) {
-      const templateFile = resolve(`${__dirname}/../../..`, filenameWithPath);
       try {
-        template = (await readFile(templateFile)).toString();
-        this.templateCache.set(filenameWithPath, template);
+        template = (await readFile(filename)).toString();
+        this.templateCache.set(filename, template);
       } catch (error) {
-        this.LogAndThrowError({ filename, templateFile }, error);
+        this.LogAndThrowError({ filename }, error);
       }
     }
 

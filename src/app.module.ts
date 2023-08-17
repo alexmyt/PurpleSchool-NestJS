@@ -14,7 +14,6 @@ import { AuthModule } from './modules/auth/auth.module';
 import { CaslModule } from './lib/casl/casl.module';
 import { IConfig } from './lib/config/config.interface';
 import { PinoLoggerModule } from './lib/pino.module';
-import { TelegramModule } from './lib/telegram/telegram.module';
 import { NotificationsModule } from './lib/notifications/notifications.module';
 
 @Module({
@@ -34,15 +33,6 @@ import { NotificationsModule } from './lib/notifications/notifications.module';
       useFactory: (configService: ConfigService<IConfig>) => {
         const uploadDir = configService.getOrThrow('storage.local.uploadDir', { infer: true });
         return [{ rootPath: resolve(uploadDir) }];
-      },
-    }),
-    TelegramModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService<IConfig>) => {
-        const token = configService.getOrThrow('telegram.token', { infer: true });
-        const chatId = configService.get('telegram.chatId', { infer: true });
-
-        return { token, chatId };
       },
     }),
   ],
