@@ -62,5 +62,6 @@ jobs:
           MONGODB_DBNAME: 'test'
           JWT_SECRET: 'secret'
           JWT_ACCESS_EXPIRE: 1d
-          TELEGRAM_TEMPLATE_DIR: 'resources/templates/telegram'
+          TELEGRAM_SERVICE_DISABLED: true
+          MAIL_SERVICE_DISABLED: true
             
