@@ -7,6 +7,6 @@ export const mail = registerAs('mail', () => ({
   port: process.env.MAIL_PORT,
   server: process.env.MAIL_SERVER || 'SMTP',
   senderEmail: process.env.MAIL_SENDER_EMAIL,
-  templateDir: process.env.MAIL_TEMPLATE_DIR,
+  templateDir: process.env.MAIL_TEMPLATE_DIR || 'resources/templates/mail',
   bccList: process.env.MAIL_BCC_LIST ? process.env.MAIL_BCC_LIST.split(',') : [],
 }));

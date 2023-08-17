@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 
 import { RoomsModule } from '../rooms/rooms.module';
+import { UsersModule } from '../users/users.module';
 
 import { ReservationsController } from './reservations.controller';
 import { ReservationModel, ReservationModelSchema } from './reservation.model';
@@ -11,6 +12,7 @@ import { ReservationsSubjectHook } from './reservations.subject-hook';
 @Module({
   imports: [
     RoomsModule,
+    UsersModule,
     MongooseModule.forFeature([
       {
         name: ReservationModel.name,

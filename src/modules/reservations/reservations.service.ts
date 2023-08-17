@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
 import { RoomsService } from '../rooms/rooms.service';
+import { UsersService } from '../users/users.service';
 import { NotificationsService } from '../../lib/notifications/notifications.service';
 import { NotificationType } from '../../lib/notifications/notifications.interface';
 
@@ -11,7 +12,11 @@ import { CreateReservationDto } from './dto/create-reservation.dto';
 import { FindReservationsDto } from './dto/find-reservations.dto';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
 import { ReservationEntity, ReservationStatisticsByRoom } from './reservations.service.interfaces';
-import { TEMPLATES } from './reservations.constants';
+import {
+  RESERVATION_CANCELED_SUBJECT,
+  RESERVATION_CREATED_SUBJECT,
+  TEMPLATES,
+} from './reservations.constants';
 
 export interface ReservationPeriod {
   rentedFrom: Date;
@@ -23,6 +28,7 @@ export class ReservationsService {
   constructor(
     @InjectModel(ReservationModel.name) private readonly reservationModel: Model<ReservationModel>,
     private readonly roomsService: RoomsService,
+    private readonly usersService: UsersService,
     private readonly notificationService: NotificationsService,
   ) {}
 
@@ -51,6 +57,16 @@ export class ReservationsService {
 
     this.notificationService.sendMessage({
       type: NotificationType.TELEGRAM,
+      templateFile: TEMPLATES.reservationCreated,
+      metadata: { ...reservation.toObject(), room },
+    });
+
+    const renter = await this.usersService.findOneById(reservation.userId);
+
+    this.notificationService.sendMessage({
+      type: NotificationType.EMAIL,
+      to: `${renter.name} <${renter.email}>`,
+      subject: RESERVATION_CREATED_SUBJECT,
       templateFile: TEMPLATES.reservationCreated,
       metadata: { ...reservation.toObject(), room },
     });
@@ -96,6 +112,7 @@ export class ReservationsService {
       .exec();
 
     const room = await this.roomsService.findOneById(reservation.roomId);
+    const renter = await this.usersService.findOneById(reservation.userId);
 
     this.notificationService.sendMessage({
       type: NotificationType.TELEGRAM,
@@ -105,8 +122,8 @@ export class ReservationsService {
 
     this.notificationService.sendMessage({
       type: NotificationType.EMAIL,
-      to: 'test@dot.com',
-      subject: 'Test',
+      to: `${renter.name} <${renter.email}>`,
+      subject: RESERVATION_CANCELED_SUBJECT,
       templateFile: TEMPLATES.reservationCanceled,
       metadata: { ...reservation, room },
     });
