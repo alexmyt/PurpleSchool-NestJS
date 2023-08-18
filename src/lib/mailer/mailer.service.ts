@@ -13,7 +13,7 @@ export class MailerService {
   private readonly defaultMailOptions: SendMailOptions;
 
   constructor(private configService: ConfigService<IConfig, true>) {
-    this.isServiceDisabled = configService.get('mail.serviceDisabled', { infer: true });
+    this.isServiceDisabled = configService.get<boolean>('mail.serviceDisabled', { infer: true });
 
     if (this.isServiceDisabled) {
       return;

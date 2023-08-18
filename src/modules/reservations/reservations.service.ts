@@ -1,22 +1,19 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
 import { RoomsService } from '../rooms/rooms.service';
 import { UsersService } from '../users/users.service';
-import { NotificationsService } from '../../lib/notifications/notifications.service';
-import { NotificationType } from '../../lib/notifications/notifications.interface';
 
 import { ReservationModel, ReservationModelDocument } from './reservation.model';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { FindReservationsDto } from './dto/find-reservations.dto';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
 import { ReservationEntity, ReservationStatisticsByRoom } from './reservations.service.interfaces';
-import {
-  RESERVATION_CANCELED_SUBJECT,
-  RESERVATION_CREATED_SUBJECT,
-  TEMPLATES,
-} from './reservations.constants';
+import { EVENTS } from './reservations.constants';
+import { ReservationCreatedEvent } from './events/reservation-created.event';
+import { ReservationCanceledEvent } from './events/reservation-canceled.event';
 
 export interface ReservationPeriod {
   rentedFrom: Date;
@@ -29,7 +26,7 @@ export class ReservationsService {
     @InjectModel(ReservationModel.name) private readonly reservationModel: Model<ReservationModel>,
     private readonly roomsService: RoomsService,
     private readonly usersService: UsersService,
-    private readonly notificationService: NotificationsService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(createScheduleDto: CreateReservationDto): Promise<ReservationModelDocument> {
@@ -55,21 +52,24 @@ export class ReservationsService {
       rentedTo,
     });
 
-    this.notificationService.sendMessage({
-      type: NotificationType.TELEGRAM,
-      templateFile: TEMPLATES.reservationCreated,
-      metadata: { ...reservation.toObject(), room },
-    });
-
+    const owner = await this.usersService.findOneById(room.userId);
     const renter = await this.usersService.findOneById(reservation.userId);
 
-    this.notificationService.sendMessage({
-      type: NotificationType.EMAIL,
-      to: `${renter.name} <${renter.email}>`,
-      subject: RESERVATION_CREATED_SUBJECT,
-      templateFile: TEMPLATES.reservationCreated,
-      metadata: { ...reservation.toObject(), room },
-    });
+    const reservationCreatedEvent: ReservationCreatedEvent = {
+      reservationId: reservation._id.toHexString(),
+      rentedFrom: reservation.rentedFrom,
+      rentedTo: reservation.rentedTo,
+      roomId: room._id,
+      roomName: room.name,
+      ownerId: owner._id.toHexString(),
+      ownerName: owner.name,
+      ownerEmail: owner.email,
+      renterId: renter._id.toHexString(),
+      renterName: renter.name,
+      renterEmail: renter.email,
+    };
+
+    this.eventEmitter.emit(EVENTS.reservationCreated, reservationCreatedEvent);
 
     return reservation;
   }
@@ -112,21 +112,24 @@ export class ReservationsService {
       .exec();
 
     const room = await this.roomsService.findOneById(reservation.roomId);
+    const owner = await this.usersService.findOneById(room.userId);
     const renter = await this.usersService.findOneById(reservation.userId);
 
-    this.notificationService.sendMessage({
-      type: NotificationType.TELEGRAM,
-      templateFile: TEMPLATES.reservationCanceled,
-      metadata: { ...reservation, room },
-    });
+    const reservationCanceledEvent: ReservationCanceledEvent = {
+      reservationId: reservation._id.toHexString(),
+      rentedFrom: reservation.rentedFrom,
+      rentedTo: reservation.rentedTo,
+      roomId: room._id,
+      roomName: room.name,
+      ownerId: owner._id.toHexString(),
+      ownerName: owner.name,
+      ownerEmail: owner.email,
+      renterId: renter._id.toHexString(),
+      renterName: renter.name,
+      renterEmail: renter.email,
+    };
 
-    this.notificationService.sendMessage({
-      type: NotificationType.EMAIL,
-      to: `${renter.name} <${renter.email}>`,
-      subject: RESERVATION_CANCELED_SUBJECT,
-      templateFile: TEMPLATES.reservationCanceled,
-      metadata: { ...reservation, room },
-    });
+    this.eventEmitter.emit(EVENTS.reservationCanceled, reservationCanceledEvent);
 
     return reservation;
   }

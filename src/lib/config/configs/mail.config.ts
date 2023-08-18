@@ -1,7 +1,7 @@
 import { registerAs } from '@nestjs/config';
 
 export const mail = registerAs('mail', () => ({
-  serviceDisabled: process.env.MAIL_SERVICE_DISABLED || false,
+  serviceDisabled: process.env.MAIL_SERVICE_DISABLED === 'true',
   host: process.env.MAIL_HOST,
   username: process.env.MAIL_USERNAME,
   password: process.env.MAIL_PASSWORD,

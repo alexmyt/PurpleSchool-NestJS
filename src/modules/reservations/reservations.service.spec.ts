@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { getModelToken } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
 
 import { RoomsService } from '../rooms/rooms.service';
 import { UsersService } from '../users/users.service';
-import { NotificationsService } from '../../lib/notifications/notifications.service';
 
 import { ReservationModel } from './reservation.model';
 import { ReservationsService } from './reservations.service';
@@ -12,21 +12,22 @@ import { ReservationsService } from './reservations.service';
 describe('ReservationService', () => {
   let service: ReservationsService;
 
+  const mockedObjectId = { toHexString: jest.fn() };
   const exec = { exec: jest.fn() };
   const where = jest.fn();
   const mockReservationModel = {
     find: jest.fn(() => ({ where, lean: () => exec })),
     findOne: jest.fn(() => ({ where, lean: () => exec })),
-    create: jest.fn(() => ({ toObject: jest.fn(() => ({})) })),
+    create: jest.fn(() => ({ toObject: jest.fn(() => ({})), _id: mockedObjectId })),
   };
   const mockRoomsService = {
-    findOneById: jest.fn(() => ({ where, lean: () => exec })),
+    findOneById: jest.fn(() => ({ where, lean: () => exec, _id: mockedObjectId })),
   };
   const mockUsersService = {
-    findOneById: jest.fn(() => ({ where, lean: () => exec })),
+    findOneById: jest.fn(() => ({ where, lean: () => exec, _id: mockedObjectId })),
   };
-  const mockNotificationsService = {
-    sendMessage: jest.fn(),
+  const mockEventEmitter2 = {
+    emit: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -38,7 +39,7 @@ describe('ReservationService', () => {
         { provide: getModelToken(ReservationModel.name), useValue: mockReservationModel },
         { provide: RoomsService, useValue: mockRoomsService },
         { provide: UsersService, useValue: mockUsersService },
-        { provide: NotificationsService, useValue: mockNotificationsService },
+        { provide: EventEmitter2, useValue: mockEventEmitter2 },
       ],
     }).compile();
 
