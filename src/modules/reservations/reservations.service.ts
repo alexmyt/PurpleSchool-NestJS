@@ -145,17 +145,19 @@ export class ReservationsService {
     const dateFrom = this.startOfDayUTC(from);
     const dateTo = this.endOfDayUTC(to);
 
-    const result = await this.reservationModel.findOne().where({
-      roomId: new Types.ObjectId(roomId),
-      isCanceled: false,
-      $or: [
-        { rentedFrom: { $gte: dateFrom, $lte: dateTo } },
-        { rentedTo: { $gte: dateFrom, $lte: dateTo } },
-        { rentedFrom: { $lt: dateFrom }, rentedTo: { $gt: dateTo } },
-      ],
-    });
+    const result = await this.reservationModel
+      .countDocuments({
+        roomId: new Types.ObjectId(roomId),
+        isCanceled: false,
+        $or: [
+          { rentedFrom: { $gte: dateFrom, $lte: dateTo } },
+          { rentedTo: { $gte: dateFrom, $lte: dateTo } },
+          { rentedFrom: { $lt: dateFrom }, rentedTo: { $gt: dateTo } },
+        ],
+      })
+      .exec();
 
-    return result !== null;
+    return result !== 0;
   }
 
   /**

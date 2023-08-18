@@ -1,3 +1,4 @@
+import { NotFoundException, ConflictException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { getModelToken } from '@nestjs/mongoose';
@@ -8,17 +9,24 @@ import { UsersService } from '../users/users.service';
 
 import { ReservationModel } from './reservation.model';
 import { ReservationsService } from './reservations.service';
+import { EVENTS } from './reservations.constants';
 
 describe('ReservationService', () => {
   let service: ReservationsService;
 
   const mockedObjectId = { toHexString: jest.fn() };
-  const exec = { exec: jest.fn() };
+  const exec = {
+    exec: jest.fn(() => {
+      _id: mockedObjectId;
+    }),
+  };
   const where = jest.fn();
   const mockReservationModel = {
     find: jest.fn(() => ({ where, lean: () => exec })),
     findOne: jest.fn(() => ({ where, lean: () => exec })),
+    findByIdAndUpdate: jest.fn(() => ({ lean: () => exec })),
     create: jest.fn(() => ({ toObject: jest.fn(() => ({})), _id: mockedObjectId })),
+    countDocuments: jest.fn(() => ({ exec: jest.fn(() => 0) })),
   };
   const mockRoomsService = {
     findOneById: jest.fn(() => ({ where, lean: () => exec, _id: mockedObjectId })),
@@ -70,25 +78,110 @@ describe('ReservationService', () => {
 
       expect(service.isReserved).toHaveBeenCalledTimes(1);
       expect(service.isReserved).toHaveBeenCalledWith(dto.roomId, expectedFrom, expectedTo);
+      expect(mockEventEmitter2.emit).toHaveBeenCalledWith(
+        EVENTS.reservationCreated,
+        expect.any(Object),
+      );
     });
 
-    it('isReserved', async () => {
+    it('should throw a NotFoundException when the room does not exist', async () => {
+      const dto = {
+        userId: '1',
+        roomId: new Types.ObjectId().toHexString(),
+        rentedFrom: '2023-01-01',
+        rentedTo: '2023-01-01',
+      };
+
+      mockRoomsService.findOneById.mockReturnValueOnce(null);
+
+      expect(service.create(dto)).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw a ConflictException when the room is already reserved for the given period', async () => {
+      const dto = {
+        userId: '1',
+        roomId: new Types.ObjectId().toHexString(),
+        rentedFrom: '2023-01-01',
+        rentedTo: '2023-01-01',
+      };
+
+      mockReservationModel.countDocuments.mockReturnValueOnce({
+        exec: jest.fn(() => 1),
+      });
+
+      await expect(service.create(dto)).rejects.toThrow(ConflictException);
+    });
+  });
+
+  describe('cancel', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    it('should cancel a reservation and return the updated reservation object', async () => {
+      const reservationId = '';
+
+      mockReservationModel.findByIdAndUpdate.mockReturnValueOnce({
+        lean: jest.fn(() => ({
+          exec: jest.fn().mockReturnValueOnce({ _id: { toHexString: jest.fn() }, roomId: '' }),
+        })),
+      });
+
+      await service.cancel(reservationId);
+
+      expect(mockReservationModel.findByIdAndUpdate).toHaveBeenCalledWith(
+        reservationId,
+        { isCanceled: true },
+        expect.any(Object),
+      );
+
+      expect(mockEventEmitter2.emit).toHaveBeenCalledWith(
+        EVENTS.reservationCanceled,
+        expect.any(Object),
+      );
+    });
+  });
+
+  describe('isReserved', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    it('should return false when the room is not reserved in the specified period', async () => {
       const rentedFrom = '2023-01-01';
       const rentedTo = '2023-01-01';
 
       const expected$gte = new Date(Date.UTC(2023, 0, 1));
       const expected$lte = new Date(Date.UTC(2023, 0, 2) - 1);
 
-      await service.isReserved(new Types.ObjectId().toHexString(), rentedFrom, rentedTo);
+      const result = await service.isReserved(
+        new Types.ObjectId().toHexString(),
+        rentedFrom,
+        rentedTo,
+      );
 
-      expect(mockReservationModel.findOne).toBeCalledTimes(1);
-      expect(mockReservationModel.findOne().where).toHaveBeenCalledWith(
+      expect(result).toBeFalsy();
+
+      expect(mockReservationModel.countDocuments).toHaveBeenCalledWith(
         expect.objectContaining({
           $or: expect.arrayContaining([
             expect.objectContaining({ rentedFrom: { $gte: expected$gte, $lte: expected$lte } }),
           ]),
         }),
       );
+    });
+
+    it('should return true when the room is reserved in the specified period', async () => {
+      const rentedFrom = '2023-01-01';
+      const rentedTo = '2023-01-01';
+
+      mockReservationModel.countDocuments.mockReturnValueOnce({
+        exec: jest.fn(() => 1),
+      });
+
+      const result = await service.isReserved(
+        new Types.ObjectId().toHexString(),
+        rentedFrom,
+        rentedTo,
+      );
+
+      expect(result).toBeTruthy();
     });
   });
 
