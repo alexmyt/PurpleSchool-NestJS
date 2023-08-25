@@ -6,6 +6,16 @@
     "deleteOutDir": true,
     "assets": [
       { "include": "resources/**/*", "exclude": "resources/images/*", "watchAssets": true }
+    ],
+    "plugins": [
+      {
+        "name": "@nestjs/swagger/plugin",
+        "options": {
+          "introspectComments": true,
+          "controllerKeyOfComment": "description",
+          "dtoFileNameSuffix": [".entity.ts", ".dto.ts", ".response.ts", ".model.ts"]
+        }
+      }
     ]
   }
 }
