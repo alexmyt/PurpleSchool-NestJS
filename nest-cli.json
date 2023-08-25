@@ -3,6 +3,16 @@
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",
   "compilerOptions": {
-    "deleteOutDir": true
+    "deleteOutDir": true,
+    "plugins": [
+      {
+        "name": "@nestjs/swagger/plugin",
+        "options": {
+          "introspectComments": true,
+          "controllerKeyOfComment": "description",
+          "dtoFileNameSuffix": [".entity.ts", ".dto.ts", ".response.ts", ".model.ts"]
+        }
+      }
+    ]
   }
 }
