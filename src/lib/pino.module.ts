@@ -31,7 +31,7 @@ const basePinoOptions = {
                   level: 'error', // log only errors to file
                   options: {
                     ...basePinoOptions,
-                    destination: 'app.log',
+                    destination: 'logs/error.log',
                     mkdir: true,
                     sync: false,
                   },
@@ -51,7 +51,7 @@ const basePinoOptions = {
                       level: 'error', // log only errors to file
                       options: {
                         ...basePinoOptions,
-                        destination: 'app.log',
+                        destination: 'logs/error.log',
                         mkdir: true,
                         sync: false,
                       },
