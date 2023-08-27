@@ -17,7 +17,7 @@ export class TelegramService {
     @Inject(TELEGRAM_MODULE_OPTIONS) private options: TelegramOptions,
     private configService: ConfigService<IConfig, true>,
   ) {
-    this.isServiceDisabled = configService.get('mail.serviceDisabled', { infer: true });
+    this.isServiceDisabled = configService.get('telegram.serviceDisabled', { infer: true });
 
     if (this.isServiceDisabled) {
       return;
@@ -35,6 +35,9 @@ export class TelegramService {
     }
 
     if (!chatId) {
+      this.logger.warn(
+        'Trying to send an message while chat ID id undefined. Check TELEGRAM_CHAT_ID env var.',
+      );
       return;
     }
 
