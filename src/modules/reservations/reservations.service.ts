@@ -1,14 +1,19 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
 import { RoomsService } from '../rooms/rooms.service';
+import { UsersService } from '../users/users.service';
 
 import { ReservationModel, ReservationModelDocument } from './reservation.model';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { FindReservationsDto } from './dto/find-reservations.dto';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
 import { ReservationEntity, ReservationStatisticsByRoom } from './reservations.service.interfaces';
+import { EVENTS } from './reservations.constants';
+import { ReservationCreatedEvent } from './events/reservation-created.event';
+import { ReservationCanceledEvent } from './events/reservation-canceled.event';
 
 export interface ReservationPeriod {
   rentedFrom: Date;
@@ -20,6 +25,8 @@ export class ReservationsService {
   constructor(
     @InjectModel(ReservationModel.name) private readonly reservationModel: Model<ReservationModel>,
     private readonly roomsService: RoomsService,
+    private readonly usersService: UsersService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(createScheduleDto: CreateReservationDto): Promise<ReservationModelDocument> {
@@ -38,12 +45,33 @@ export class ReservationsService {
       throw new ConflictException();
     }
 
-    return this.reservationModel.create({
+    const reservation = await this.reservationModel.create({
       ...createScheduleDto,
       roomId: room._id,
       rentedFrom,
       rentedTo,
     });
+
+    const owner = await this.usersService.findOneById(room.userId);
+    const renter = await this.usersService.findOneById(reservation.userId);
+
+    const reservationCreatedEvent: ReservationCreatedEvent = {
+      reservationId: reservation._id.toHexString(),
+      rentedFrom: reservation.rentedFrom,
+      rentedTo: reservation.rentedTo,
+      roomId: room._id,
+      roomName: room.name,
+      ownerId: owner._id.toHexString(),
+      ownerName: owner.name,
+      ownerEmail: owner.email,
+      renterId: renter._id.toHexString(),
+      renterName: renter.name,
+      renterEmail: renter.email,
+    };
+
+    this.eventEmitter.emit(EVENTS.reservationCreated, reservationCreatedEvent);
+
+    return reservation;
   }
 
   findForRoom(roomId: string, dto: FindReservationsDto): Promise<ReservationModel[]> {
@@ -77,11 +105,33 @@ export class ReservationsService {
       .exec();
   }
 
-  cancel(reservationId: string): Promise<ReservationModel | null> {
-    return this.reservationModel
+  async cancel(reservationId: string): Promise<ReservationModel | null> {
+    const reservation = await this.reservationModel
       .findByIdAndUpdate(reservationId, { isCanceled: true }, { returnDocument: 'after' })
       .lean()
       .exec();
+
+    const room = await this.roomsService.findOneById(reservation.roomId);
+    const owner = await this.usersService.findOneById(room.userId);
+    const renter = await this.usersService.findOneById(reservation.userId);
+
+    const reservationCanceledEvent: ReservationCanceledEvent = {
+      reservationId: reservation._id.toHexString(),
+      rentedFrom: reservation.rentedFrom,
+      rentedTo: reservation.rentedTo,
+      roomId: room._id,
+      roomName: room.name,
+      ownerId: owner._id.toHexString(),
+      ownerName: owner.name,
+      ownerEmail: owner.email,
+      renterId: renter._id.toHexString(),
+      renterName: renter.name,
+      renterEmail: renter.email,
+    };
+
+    this.eventEmitter.emit(EVENTS.reservationCanceled, reservationCanceledEvent);
+
+    return reservation;
   }
 
   delete(reservationId: string): Promise<ReservationModel | null> {
@@ -95,16 +145,19 @@ export class ReservationsService {
     const dateFrom = this.startOfDayUTC(from);
     const dateTo = this.endOfDayUTC(to);
 
-    const result = await this.reservationModel.findOne().where({
-      roomId: new Types.ObjectId(roomId),
-      $or: [
-        { rentedFrom: { $gte: dateFrom, $lte: dateTo } },
-        { rentedTo: { $gte: dateFrom, $lte: dateTo } },
-        { rentedFrom: { $lt: dateFrom }, rentedTo: { $gt: dateTo } },
-      ],
-    });
+    const result = await this.reservationModel
+      .countDocuments({
+        roomId: new Types.ObjectId(roomId),
+        isCanceled: false,
+        $or: [
+          { rentedFrom: { $gte: dateFrom, $lte: dateTo } },
+          { rentedTo: { $gte: dateFrom, $lte: dateTo } },
+          { rentedFrom: { $lt: dateFrom }, rentedTo: { $gt: dateTo } },
+        ],
+      })
+      .exec();
 
-    return result !== null;
+    return result !== 0;
   }
 
   /**

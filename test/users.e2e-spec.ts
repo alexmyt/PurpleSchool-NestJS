@@ -54,7 +54,8 @@ describe('Users controller (e2e)', () => {
       const roomsService = app.get(UsersService);
       await roomsService.remove(createdUserId);
     }
-    disconnect();
+    await disconnect();
+    app.close();
   });
 
   it('should not create a new user from unregistered, POST /users', () => {

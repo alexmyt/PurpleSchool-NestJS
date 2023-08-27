@@ -67,7 +67,8 @@ describe('Rooms controller (e2e)', () => {
 
     if (testUserRoom) await roomsService.remove(testUserRoom._id.toHexString());
 
-    disconnect();
+    await disconnect();
+    app.close();
   });
 
   it('should return 401 when create new room from unauthenticated user, POST /rooms', () => {
