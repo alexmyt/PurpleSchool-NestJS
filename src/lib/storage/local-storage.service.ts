@@ -6,10 +6,17 @@ import { ensureDir, writeFile, remove } from 'fs-extra';
 
 import { IConfig } from '../config/config.interface';
 
-import { FileMetadata, FileStorageService, FileUploadSource } from './storage.interface';
+import {
+  FileMetadata,
+  FileStorageService,
+  FileUploadSource,
+  StorageType,
+} from './storage.interface';
 
 @Injectable()
 export class LocalStorageService implements FileStorageService {
+  readonly type = StorageType.LOCAL;
+
   private uploadDir: string;
 
   constructor(private configService: ConfigService<IConfig>) {
@@ -21,14 +28,22 @@ export class LocalStorageService implements FileStorageService {
     const uploadDir = path.resolve(this.uploadDir, destination);
     await ensureDir(uploadDir);
 
-    const { filename, originalname, buffer } = file;
+    const { filename, originalname, buffer, size, mimetype } = file;
 
     await writeFile(path.join(uploadDir, filename), buffer);
 
-    return { url: `${destination}/${filename}`, originalname, filename, destination };
+    const url = `${destination}/${filename}`;
+    return {
+      url,
+      originalname,
+      filename,
+      destination,
+      size,
+      mimetype,
+    };
   }
 
-  async delete(fileMetadata: FileMetadata): Promise<void> {
+  async delete(fileMetadata: Pick<FileMetadata, 'url'>): Promise<void> {
     await remove(path.resolve(this.uploadDir, fileMetadata.url));
   }
 }

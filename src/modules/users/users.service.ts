@@ -17,7 +17,7 @@ import { UpdatePasswordDto } from './dto/update-password.dto';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(UserModel.name) private UserModel: Model<UserModel>) {}
+  constructor(@InjectModel(UserModel.name) private userModel: Model<UserModel>) {}
 
   async create(createUserDto: CreateUserDto): Promise<UserModelDocument> {
     const existingUser = await this.findOneByEmail(createUserDto.email);
@@ -28,21 +28,22 @@ export class UsersService {
     const { password, ...restDto } = createUserDto;
     const hashedPassword = await HelperService.hashPassword(password);
 
-    return this.UserModel.create({ ...restDto, hashedPassword });
+    return this.userModel.create({ ...restDto, hashedPassword });
   }
 
   findAll(): Promise<UserModel[]> {
-    return this.UserModel.find({ $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }] })
+    return this.userModel
+      .find({ $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }] })
       .lean()
       .exec();
   }
 
   findOneByEmail(email: string): Promise<UserModelDocument | null> {
-    return this.UserModel.findOne({ email }).exec();
+    return this.userModel.findOne({ email }).exec();
   }
 
   findOneById(id: string): Promise<UserModelDocument | null> {
-    return this.UserModel.findById(id).exec();
+    return this.userModel.findById(id).exec();
   }
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<UserModel> {
@@ -51,7 +52,8 @@ export class UsersService {
       throw new NotFoundException(UsersConstants.USER_NOT_FOUND);
     }
 
-    return this.UserModel.findByIdAndUpdate(id, updateUserDto, { returnDocument: 'after' })
+    return this.userModel
+      .findByIdAndUpdate(id, updateUserDto, { returnDocument: 'after' })
       .lean()
       .exec();
   }
@@ -71,15 +73,12 @@ export class UsersService {
     }
 
     const hashedPassword = await HelperService.hashPassword(updatePasswordDto.password);
-    return this.UserModel.findByIdAndUpdate(id, { hashedPassword }).lean().exec();
+    return this.userModel.findByIdAndUpdate(id, { hashedPassword }).lean().exec();
   }
 
   async softRemove(id: string): Promise<UserModel> {
-    const result = await this.UserModel.findByIdAndUpdate(
-      id,
-      { isDeleted: true },
-      { returnDocument: 'after' },
-    )
+    const result = await this.userModel
+      .findByIdAndUpdate(id, { isDeleted: true }, { returnDocument: 'after' })
       .lean()
       .exec();
 
@@ -91,6 +90,6 @@ export class UsersService {
   }
 
   remove(id: string): Promise<UserModel> {
-    return this.UserModel.findByIdAndDelete(id, { lean: true });
+    return this.userModel.findByIdAndDelete(id, { lean: true });
   }
 }

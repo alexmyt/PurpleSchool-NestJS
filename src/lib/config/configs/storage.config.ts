@@ -4,6 +4,7 @@ export const storage = registerAs('storage', () => ({
   defaultType: process.env.DEFAULT_STORAGE_TYPE || 'local',
   local: {
     uploadDir: process.env.LOCAL_STORAGE_UPLOAD_DIR || 'uploads/images',
+    serveRoot: process.env.LOCAL_STORAGE_SERVE_ROOT || '',
   },
   s3: {
     endpoint: process.env.S3_STORAGE_ENDPOINT,

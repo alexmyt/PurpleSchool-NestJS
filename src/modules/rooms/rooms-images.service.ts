@@ -3,12 +3,11 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import * as sharp from 'sharp';
 
-import { FileMetadata } from '../../lib/storage/storage.interface';
+import { FileUploadResult } from '../../lib/storage/storage.interface';
 import { StorageService } from '../../lib/storage/storage.service';
 
 import { RoomModel } from './room.model';
-import { ROOM_NOT_FOUND, IMAGE_NOT_FOUND } from './rooms.constants';
-import { RoomEntity } from './rooms.service.interfaces';
+import { ROOM_NOT_FOUND } from './rooms.constants';
 
 @Injectable()
 export class RoomsImagesService {
@@ -17,7 +16,7 @@ export class RoomsImagesService {
     private readonly fileStorage: StorageService,
   ) {}
 
-  async uploadImages(roomId: string, images: Express.Multer.File[]): Promise<FileMetadata[]> {
+  async uploadImages(roomId: string, images: Express.Multer.File[]): Promise<FileUploadResult[]> {
     const room = await this.roomModel.findById(new Types.ObjectId(roomId)).lean().exec();
     if (!room) {
       throw new NotFoundException(ROOM_NOT_FOUND);
@@ -35,30 +34,7 @@ export class RoomsImagesService {
     return uploadResults;
   }
 
-  async deleteImage(roomId: string, imageId: string): Promise<void> {
-    const room = await this.roomModel
-      .aggregate<RoomEntity>([
-        { $match: { _id: new Types.ObjectId(roomId) } },
-        {
-          $lookup: {
-            from: 'files',
-            localField: '_id',
-            foreignField: 'owner',
-            as: 'images',
-          },
-        },
-        {
-          $match: {
-            images: { $elemMatch: { _id: new Types.ObjectId(imageId) } },
-          },
-        },
-      ])
-      .exec();
-
-    if (!room.length) {
-      throw new NotFoundException(IMAGE_NOT_FOUND);
-    }
-
-    await this.fileStorage.delete(imageId);
+  deleteImage(roomId: string, imageId: string): Promise<void> {
+    return this.fileStorage.delete(imageId);
   }
 }

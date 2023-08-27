@@ -52,6 +52,8 @@ describe('LocalStorageService', () => {
         originalname: 'test.txt',
         filename: 'test_123.txt',
         buffer: Buffer.from('test content'),
+        size: 123,
+        mimetype: 'text',
       };
 
       const expectedDir = new Date().toISOString().slice(0, 10);
@@ -63,6 +65,8 @@ describe('LocalStorageService', () => {
         originalname: file.originalname,
         filename: file.filename,
         destination: expect.stringContaining(expectedDir),
+        size: 123,
+        mimetype: 'text',
       });
 
       expect(ensureDir).toHaveBeenCalledTimes(1);
@@ -73,10 +77,7 @@ describe('LocalStorageService', () => {
   describe('delete', () => {
     it('should delete a file', async () => {
       const fileMetadata = {
-        filename: 'test_123.txt',
-        originalname: '',
-        _id: '',
-        url: '',
+        url: '123/test_123.txt',
       };
 
       await localStorageService.delete(fileMetadata);

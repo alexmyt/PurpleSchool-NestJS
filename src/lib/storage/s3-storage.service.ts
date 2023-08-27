@@ -4,10 +4,17 @@ import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client
 
 import { IConfig } from '../config/config.interface';
 
-import { FileMetadata, FileStorageService, FileUploadSource } from './storage.interface';
+import {
+  FileMetadata,
+  FileStorageService,
+  FileUploadSource,
+  StorageType,
+} from './storage.interface';
 
 @Injectable()
 export class S3StorageService implements FileStorageService {
+  readonly type = StorageType.S3;
+
   private s3Client: S3Client;
 
   private bucket: string;
@@ -29,7 +36,7 @@ export class S3StorageService implements FileStorageService {
   }
 
   async upload(file: FileUploadSource): Promise<FileMetadata> {
-    const { filename, originalname, buffer } = file;
+    const { filename, originalname, buffer, size, mimetype } = file;
 
     const command = new PutObjectCommand({
       Bucket: this.bucket,
@@ -41,10 +48,10 @@ export class S3StorageService implements FileStorageService {
     await this.s3Client.send(command);
 
     const url = new URL(`${this.bucket}/${filename}`, this.endpoint).toString();
-    return { url, originalname, filename };
+    return { url, originalname, filename, size, mimetype };
   }
 
-  async delete(fileMetadata: FileMetadata): Promise<void> {
+  async delete(fileMetadata: Pick<FileMetadata, 'filename'>): Promise<void> {
     const command = new DeleteObjectCommand({
       Bucket: this.bucket,
       Key: fileMetadata.filename,
