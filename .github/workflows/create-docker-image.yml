@@ -48,7 +48,7 @@ jobs:
 
       - name: Create Drone build for stage
         run: |
-          curl -X POST ${{ vars.DRONE_HOST }}/repos/${{ github.repository }}/builds?branch=${{ github.ref_name }}&commit=${{ github.sha }} -H "Authorization: Bearer ${{ secret.DRONE_TOKEN }}"
+          curl -X POST ${{ vars.DRONE_HOST }}/repos/${{ github.repository }}/builds?branch=${{ github.ref_name }}&commit=${{ github.sha }} -H "Authorization: Bearer ${{ secrets.DRONE_TOKEN }}"
   
 
     
