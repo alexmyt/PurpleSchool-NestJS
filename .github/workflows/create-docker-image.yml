@@ -44,6 +44,10 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Create Drone build for stage
+        run: |
+          curl -X POST ${{ secrets.DRONE_HOST }}/repos/${{ github.repository }}/builds?branch=${{ github.ref_name }}&commit=${{ github.sha }} -H "Authorization: Bearer ${{ secrets.DRONE_TOKEN }}"
   
 
     
