@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { Logger } from 'nestjs-pino';
 
 import { IConfig } from './lib/config/config.interface';
+import { setupSwagger } from './lib/swagger/swagger.utils';
 import { AppUtils } from './common/app.utils';
 import { AppModule } from './app.module';
 
@@ -12,6 +13,8 @@ async function bootstrap() {
   app.useLogger(app.get(Logger));
 
   const configService = app.get(ConfigService<IConfig>);
+
+  setupSwagger(app, configService);
 
   app.useGlobalPipes(new ValidationPipe(AppUtils.validationPipeOptions()));
 

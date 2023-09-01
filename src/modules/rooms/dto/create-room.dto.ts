@@ -31,7 +31,7 @@ export class CreateRoomDto {
   @ArrayNotEmpty()
   @IsString({ each: true })
   @IsNotEmpty({ each: true })
-  amenities: string[];
+  amenities?: string[];
 
   @IsNotEmpty()
   @IsNumber()
