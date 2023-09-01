@@ -24,4 +24,4 @@ trigger:
     - develop
     - ci
   event:
-    - push
+    - custom
