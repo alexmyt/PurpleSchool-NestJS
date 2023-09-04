@@ -1,0 +1,27 @@
+kind: pipeline
+type: docker
+name: default
+
+steps:
+  - name: deploy stage
+    image: appleboy/drone-ssh:1.6.4
+    settings:
+      host:
+        from_secret: stage_ssh_host
+      username:
+        from_secret: stage_ssh_user
+      password:
+        from_secret: stage_ssh_password
+      port: 22
+      command_timeout: 3m
+      script:
+        - docker pull ghcr.io/alexmyt/purpleschool-nestjs:develop
+        - docker compose up --force-recreate -d node
+        - docker image prune -f
+
+trigger:
+  branch:
+    - develop
+    - ci
+  event:
+    - custom
