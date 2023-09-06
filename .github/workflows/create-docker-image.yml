@@ -11,8 +11,33 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  bump-new-release:
+    name: Update release
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: git config
+        run: |
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+      
+      - run: npm ci
+  
+      - run: npm run release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build-and-push-image:
     runs-on: ubuntu-latest
+    needs: bump-new-release
     environment: stage
 
     permissions:
@@ -35,7 +60,7 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-  
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
@@ -48,6 +73,3 @@ jobs:
       - name: Create Drone build for stage
         run: |
           curl -X POST "${{ vars.DRONE_HOST }}/api/repos/${{ github.repository }}/builds?branch=${{ github.ref_name }}&commit=${{ github.sha }}" -H "Authorization: Bearer ${{ secrets.DRONE_TOKEN }}"
-  
-
-    
