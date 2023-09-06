@@ -33,7 +33,7 @@ jobs:
   
       - run: npm run release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASEIT_TOKEN }}
 
   build-and-push-image:
     runs-on: ubuntu-latest
