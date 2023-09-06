@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - 'develop'
+      - '!develop/v*'
     tags-ignore:
       - v*
 
@@ -54,6 +55,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+      - run: git checkout HEAD^
 
       - name: Log in to the Container registry
         uses: docker/login-action@v2
