@@ -29,6 +29,7 @@ jobs:
         run: |
           git config user.name "${GITHUB_ACTOR}"
           git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          git config url "https://${{ secrets.RELEASEIT_TOKEN }}@github.com:alexmyt/PurpleSchool-NestJS.git"
           git config -l
 
       - name: Setup Node.js
