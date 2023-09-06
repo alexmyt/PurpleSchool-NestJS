@@ -38,7 +38,7 @@ jobs:
 
       - run: npm ci
   
-      - run: npm run release -- -VV --git.pushRepo="https://${{ secrets.RELEASEIT_TOKEN }}@github.com:alexmyt/PurpleSchool-NestJS.git"
+      - run: npm run release -- -VV --git.pushRepo="https://${{ secrets.RELEASEIT_TOKEN }}@github.com/alexmyt/PurpleSchool-NestJS.git"
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASEIT_TOKEN }}
 
