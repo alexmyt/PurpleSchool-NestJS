@@ -40,7 +40,7 @@ jobs:
 
       - run: npm ci
   
-      - run: npm run release -- --git.pushRepo="ssh://${{ secrets.RELEASEIT_TOKEN }}@github.com/${{ github.repository }}.git"
+      - run: npm run release -- --git.pushRepo="https://${{ secrets.RELEASEIT_TOKEN }}@github.com/${{ github.repository }}.git"
 
   build-and-push-image:
     runs-on: ubuntu-latest
