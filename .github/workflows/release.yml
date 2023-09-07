@@ -44,4 +44,4 @@ jobs:
   
       - run: npm run release -- --git.pushRepo="https://${{ secrets.RELEASEIT_TOKEN }}@github.com/${{ github.repository }}.git"
         env:
-          GITHUB_TOCKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASEIT_TOKEN }}
