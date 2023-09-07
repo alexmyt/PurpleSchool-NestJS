@@ -45,6 +45,7 @@ jobs:
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=develop
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
@@ -57,4 +58,4 @@ jobs:
 
       - name: Create Drone build for stage
         run: |
-          curl -X POST "${{ vars.DRONE_HOST }}/api/repos/${{ github.repository }}/builds?branch=${{ github.ref_name }}&commit=${{ github.sha }}" -H "Authorization: Bearer ${{ secrets.DRONE_TOKEN }}"
+          curl -X POST "${{ vars.DRONE_HOST }}/api/repos/${{ github.repository }}/builds?branch=develop" -H "Authorization: Bearer ${{ secrets.DRONE_TOKEN }}"
