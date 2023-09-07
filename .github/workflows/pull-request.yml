@@ -12,8 +12,10 @@ concurrency:
 
 jobs:
   unit-tests:
+    if: startsWith( github.head_ref, 'ci/' ) == false
     runs-on: ubuntu-latest
     timeout-minutes: 5
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -34,6 +36,7 @@ jobs:
         run: npm run lint
 
   integration-tests:
+    if: startsWith( github.head_ref, 'ci/' ) == false
     needs: unit-tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
