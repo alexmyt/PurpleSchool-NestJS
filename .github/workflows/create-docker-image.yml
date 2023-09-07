@@ -47,7 +47,7 @@ jobs:
           context: .
           file: ./deploy/Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.meta.outputs.tags }}, develop
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Create Drone build for stage
