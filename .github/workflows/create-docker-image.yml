@@ -1,21 +1,25 @@
-name: Create a Docker Image and publish it to Github registry
+name: Create a Docker image and deploy it to stage
 
 on:
   workflow_dispatch:
   push:
-    branches:
-      - 'main'
-      - 'develop'
+    tags:
+      - v*
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-push-image:
+    name: Create a Docker Image and publish it to Github registry
     runs-on: ubuntu-latest
     environment: stage
 
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+    
     permissions:
       contents: read
       packages: write
@@ -36,7 +40,13 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-  
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=develop
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
@@ -48,7 +58,4 @@ jobs:
 
       - name: Create Drone build for stage
         run: |
-          curl -X POST "${{ vars.DRONE_HOST }}/api/repos/${{ github.repository }}/builds?branch=${{ github.ref_name }}&commit=${{ github.sha }}" -H "Authorization: Bearer ${{ secrets.DRONE_TOKEN }}"
-  
-
-    
+          curl -X POST "${{ vars.DRONE_HOST }}/api/repos/${{ github.repository }}/builds?branch=develop" -H "Authorization: Bearer ${{ secrets.DRONE_TOKEN }}"
