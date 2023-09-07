@@ -3,8 +3,6 @@ name: Create a Docker image and deploy it to stage
 on:
   workflow_dispatch:
   push:
-    branches: 
-      - 'develop'
     tags:
       - v*
 
