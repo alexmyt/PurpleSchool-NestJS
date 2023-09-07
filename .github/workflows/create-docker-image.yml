@@ -40,6 +40,12 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=develop
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
@@ -47,7 +53,7 @@ jobs:
           context: .
           file: ./deploy/Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}, develop
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Create Drone build for stage
