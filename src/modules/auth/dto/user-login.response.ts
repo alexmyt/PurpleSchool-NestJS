@@ -4,5 +4,6 @@ class UserInfoDto {
 }
 export class UserLoginResponseDTO {
   accessToken: string;
+  refreshToken: string;
   user: UserInfoDto;
 }
