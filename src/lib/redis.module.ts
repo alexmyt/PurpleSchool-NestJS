@@ -18,4 +18,4 @@ import { IConfig } from './config/config.interface';
     }),
   ],
 })
-export default class NestRedisModule {}
+export class NestRedisModule {}

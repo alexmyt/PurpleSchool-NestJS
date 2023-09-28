@@ -4,6 +4,7 @@ import { Module } from '@nestjs/common';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { ConfigService } from '@nestjs/config';
 
+import { NestRedisModule } from './lib/redis.module';
 import { BullMQModule } from './lib/bullmq.module';
 import { RoomsModule } from './modules/rooms/rooms.module';
 import { ConfigModule } from './lib/config/config.module';
@@ -18,6 +19,7 @@ import { NotificationsModule } from './lib/notifications/notifications.module';
 
 @Module({
   imports: [
+    NestRedisModule,
     BullMQModule,
     ConfigModule,
     PinoLoggerModule,

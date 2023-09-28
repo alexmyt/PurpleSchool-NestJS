@@ -1,5 +1,5 @@
 import { Body, HttpCode, Post } from '@nestjs/common';
-import { ApiOkResponse, ApiUnauthorizedResponse } from '@nestjs/swagger';
+import { ApiForbiddenResponse, ApiOkResponse, ApiUnauthorizedResponse } from '@nestjs/swagger';
 
 import { Public } from '../../common/decorators/public.decorator';
 import { GenericController } from '../../common/decorators/controller.decorator';
@@ -30,14 +30,14 @@ export class AuthController {
     };
   }
 
+  @Public()
+  @HttpCode(200)
   @Post('refresh')
   @ApiOkResponse({ type: UserLoginResponseDTO, description: 'Tokens hav been refreshed' })
-  @ApiUnauthorizedResponse({ description: 'User not authorized' })
-  async refresh(
-    @AuthUser() user: AuthenticatedUserInfo,
-    @Body() { refreshToken }: RefreshTokenDTO,
-  ): Promise<UserLoginResponseDTO> {
-    const result = await this.authService.refreshTokens(user, refreshToken);
+  @ApiUnauthorizedResponse({ description: 'User not found or invalid password' })
+  @ApiForbiddenResponse({ description: 'Token is invalid or banned' })
+  async refresh(@Body() { refreshToken }: RefreshTokenDTO): Promise<UserLoginResponseDTO> {
+    const result = await this.authService.refreshTokens(refreshToken);
 
     return {
       accessToken: result.accessToken,

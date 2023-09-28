@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { Redis } from 'ioredis';
+import { RedisService } from '@songkeys/nestjs-redis';
 
 import { AuthenticatedUserInfo } from '../../modules/auth/auth.interface';
 import { IConfig } from '../config/config.interface';
@@ -13,11 +15,14 @@ import { AccessTokenPayload, RefreshTokenPayload } from './tokens.interface';
 export class TokensService {
   private refreshTokenExpiresIn: string | number;
   private accessTokenExpiresIn: string | number;
+  private redis: Redis;
 
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService<IConfig>,
+    private readonly redisService: RedisService,
   ) {
+    this.redis = this.redisService.getClient();
     this.refreshTokenExpiresIn = this.configService.get('jwt.refreshExpire', { infer: true });
     this.accessTokenExpiresIn = this.configService.get('jwt.accessExpire', { infer: true });
   }
@@ -50,6 +55,34 @@ export class TokensService {
   public async verify<T extends object>(token: string): Promise<T> {
     const payload = await this.jwtService.verifyAsync<T>(token);
     return payload;
+  }
+
+  /**
+   * Checks if a token with a specific identifier (jti) has been banned.
+   *
+   * @param jti - The identifier of the token to check if it has been banned.
+   * @returns A Promise that resolves to a boolean value indicating if the token has been banned (true) or not (false).
+   */
+  public async isTokenBanned(jti: string): Promise<boolean> {
+    const bannedKey = this.getBannedKey(jti);
+    const isBanned = await this.redis.exists(bannedKey);
+    return isBanned > 0;
+  }
+
+  /**
+   * Bans a token by storing it in a Redis database with an expiration time.
+   *
+   * @param jti - The identifier of the token to be banned.
+   * @param expiresAt - The expiration time of the banned token in seconds since the Unix epoch.
+   * @returns None.
+   */
+  public async banToken(jti: string, expiresAtSeconds: number): Promise<void> {
+    const bannedKey = this.getBannedKey(jti);
+    await this.redis.set(bannedKey, 'banned', 'EXAT', expiresAtSeconds);
+  }
+
+  private getBannedKey(jti: string): string {
+    return `jwt.banned.${jti}`;
   }
 
   /**

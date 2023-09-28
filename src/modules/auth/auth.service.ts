@@ -1,17 +1,19 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { HelperService } from '../../common/helper.service';
 import { IConfig } from '../../lib/config/config.interface';
+import { UserModelDocument } from '../users/user.model';
 import { UsersService } from '../users/users.service';
 import { TokensService } from '../../lib/tokens/tokens.service';
 
 import { AuthResponse, AuthenticatedUserInfo, JwtPayload } from './auth.interface';
+import { ERROR_INVALID_TOKEN, ERROR_LOGIN_FAILED } from './auth.constants';
 
 @Injectable()
 export class AuthService {
-  refreshTokenExpiresIn: string | number;
-  accessTokenExpiresIn: string | number;
+  private readonly refreshTokenExpiresIn: string | number;
+  private readonly accessTokenExpiresIn: string | number;
 
   constructor(
     private readonly usersService: UsersService,
@@ -33,18 +35,15 @@ export class AuthService {
   public async login(email: string, password: string): Promise<AuthResponse> {
     const user = await this.usersService.findOneByEmail(email);
     if (!user) {
-      throw new UnauthorizedException();
+      throw new UnauthorizedException(ERROR_LOGIN_FAILED);
     }
 
     const isPasswordValid = await HelperService.verifyPassword(password, user.hashedPassword);
     if (!isPasswordValid) {
-      throw new UnauthorizedException();
+      throw new UnauthorizedException(ERROR_LOGIN_FAILED);
     }
 
-    const authUserInfo: AuthenticatedUserInfo = {
-      id: user._id.toHexString(),
-      role: user.role,
-    };
+    const authUserInfo = this.getAuthUserInfo(user);
 
     const { accessToken, refreshToken } = await this.tokensService.generateTokenPair(authUserInfo);
 
@@ -54,19 +53,35 @@ export class AuthService {
   /**
    * Refreshes the access and refresh tokens for an authenticated user.
    *
-   * @param authUserInfo - The authenticated user information, including the user ID and role.
-   * @param refreshToken - The refresh token used to generate new access and refresh tokens.
+   * @param incomingRefreshToken - The refresh token used to generate new access and refresh tokens.
    * @returns A promise that resolves to an object containing the new access token, new refresh token, and the user information.
    */
-  public async refreshTokens(
-    authUserInfo: AuthenticatedUserInfo,
-    refreshToken: string,
-  ): Promise<AuthResponse> {
-    await this.tokensService.verify<JwtPayload>(refreshToken);
+  public async refreshTokens(incomingRefreshToken: string): Promise<AuthResponse> {
+    const { jti, exp, sub } = await this.tokensService.verify<JwtPayload>(incomingRefreshToken);
 
-    const { accessToken, refreshToken: newRefreshToken } =
-      await this.tokensService.generateTokenPair(authUserInfo);
+    const tokenIsBanned = await this.tokensService.isTokenBanned(jti);
+    if (tokenIsBanned) {
+      throw new ForbiddenException(ERROR_INVALID_TOKEN);
+    }
 
-    return { accessToken, refreshToken: newRefreshToken, user: authUserInfo };
+    await this.tokensService.banToken(jti, exp);
+
+    const userFromToken = await this.usersService.findOneById(sub);
+    if (!userFromToken) {
+      throw new UnauthorizedException(ERROR_LOGIN_FAILED);
+    }
+
+    const authUserInfo = this.getAuthUserInfo(userFromToken);
+
+    const { accessToken, refreshToken } = await this.tokensService.generateTokenPair(authUserInfo);
+
+    return { accessToken, refreshToken, user: authUserInfo };
+  }
+
+  private getAuthUserInfo(user: UserModelDocument): AuthenticatedUserInfo {
+    return {
+      id: user._id.toHexString(),
+      role: user.role,
+    };
   }
 }
