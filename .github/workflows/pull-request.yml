@@ -71,6 +71,7 @@ jobs:
           MONGODB_DBNAME: 'test'
           JWT_SECRET: 'secret'
           JWT_ACCESS_EXPIRE: 1d
+          JWT_REFRESH_EXPIRE: 7d
           TELEGRAM_SERVICE_DISABLED: true
           MAIL_SERVICE_DISABLED: true
             
