@@ -12,6 +12,7 @@ import { IConfig } from './config/config.interface';
         dbName: configService.get('mongodb.dbName', { infer: true }),
         user: configService.get('mongodb.user', { infer: true }),
         pass: configService.get('mongodb.pass', { infer: true }),
+        lazyConnection: true,
       }),
       inject: [ConfigService],
     }),

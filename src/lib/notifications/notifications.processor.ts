@@ -1,4 +1,4 @@
-import { NotImplementedException } from '@nestjs/common';
+import { NotImplementedException, OnModuleDestroy } from '@nestjs/common';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 
@@ -8,7 +8,7 @@ import { TelegramChannel } from './channels/telegram.channel';
 import { EmailChannel } from './channels/email.channel';
 
 @Processor(NOTIFICATIONS_QUEUE_NAME)
-export class NotificationsProcessor extends WorkerHost {
+export class NotificationsProcessor extends WorkerHost implements OnModuleDestroy {
   constructor(
     private readonly telegramChannel: TelegramChannel,
     private readonly emailChannel: EmailChannel,
@@ -26,5 +26,9 @@ export class NotificationsProcessor extends WorkerHost {
     } else {
       throw new NotImplementedException();
     }
+  }
+
+  async onModuleDestroy() {
+    await this.worker.close();
   }
 }
