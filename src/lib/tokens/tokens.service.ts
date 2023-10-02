@@ -3,44 +3,88 @@ import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { Redis } from 'ioredis';
-import { RedisService } from '@songkeys/nestjs-redis';
 
-import { AuthenticatedUserInfo } from '../../modules/auth/auth.interface';
 import { IConfig } from '../config/config.interface';
 
-import { AccessTokenPayload, RefreshTokenPayload } from './tokens.interface';
+import { AccessTokenPayload, JwtPayload, RefreshTokenPayload } from './tokens.interface';
+import { TokensRepository } from './tokens.repository';
 
 @Injectable()
 export class TokensService {
   private refreshTokenExpiresIn: string | number;
   private accessTokenExpiresIn: string | number;
-  private redis: Redis;
 
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService<IConfig>,
-    private readonly redisService: RedisService,
+    private readonly tokensRepository: TokensRepository,
   ) {
-    this.redis = this.redisService.getClient();
     this.refreshTokenExpiresIn = this.configService.get('jwt.refreshExpire', { infer: true });
     this.accessTokenExpiresIn = this.configService.get('jwt.accessExpire', { infer: true });
   }
 
   /**
-   * Generates a pair of tokens: an access token and a refresh token.
+   * Checks if a refresh session exists for a given payload.
    *
-   * @param user - An object containing the user's ID and role.
+   * @param sub - The subject of the JWT payload.
+   * @param jti - The JWT ID of the refresh session.
+   * @returns A boolean indicating whether a refresh session exists for the given payload.
+   */
+  public async isRefreshSessionExists(sub: string, jti: string): Promise<boolean> {
+    const sessionData = await this.tokensRepository.getRefreshSession(sub, jti);
+
+    return !!sessionData;
+  }
+
+  /**
+   * Delete a refresh session.
+   *
+   * @param sub - The subject of the JWT payload.
+   * @param jti - The JWT ID of the refresh session.
+   */
+  public async deleteRefreshSession(sub: string, jti: string): Promise<void> {
+    await this.tokensRepository.deleteRefreshSession(sub, jti);
+  }
+
+  /**
+   * Save a refresh session by decoding the refresh token, extracting the payload, and then calling the `saveRefreshSession` method of the `TokensRepository` class.
+   *
+   * @param refreshToken The refresh token to be saved.
+   */
+  public async saveRefreshSession(refreshToken: string): Promise<void> {
+    const { sub, jti, exp } = this.jwtService.decode(refreshToken, { json: true }) as JwtPayload;
+    await this.tokensRepository.saveRefreshSession({ sub, jti, exp });
+  }
+
+  /**
+   * Delete old refresh session and generate new access and refresh tokens pair
+   *
+   * @param sub - The subject of the JWT payload.
+   * @param oldJti - The JWT ID of the previous refresh session.
+   * @param payload - An object containing the token payload
    * @returns A promise that resolves to an object containing the generated access token and refresh token.
    */
-  public async generateTokenPair(user: AuthenticatedUserInfo) {
-    const { id, ...jwtPayload } = user;
-    const jwtid = this.jwtid();
+  public async refreshTokenPair(sub: string, oldJti: string, payload: AccessTokenPayload) {
+    await this.deleteRefreshSession(sub, oldJti);
+    return await this.generateTokenPair(sub, payload);
+  }
+
+  /**
+   * Generates a pair of tokens: an access token and a refresh token.
+   *
+   * @param sub - The subject of the JWT payload.
+   * @param payload - An object containing the token payload
+   * @returns A promise that resolves to an object containing the generated access token and refresh token.
+   */
+  public async generateTokenPair(sub: string, payload: AccessTokenPayload) {
+    const jwtid = this.generateJwtId();
 
     const [accessToken, refreshToken] = await Promise.all([
-      this.generateAccessToken(id, jwtPayload, { jwtid }),
-      this.generateRefreshToken(id, {}, { jwtid }),
+      this.generateAccessToken(sub, payload, { jwtid }),
+      this.generateRefreshToken(sub, {}, { jwtid }),
     ]);
+
+    await this.saveRefreshSession(refreshToken);
 
     return { accessToken, refreshToken };
   }
@@ -58,34 +102,6 @@ export class TokensService {
   }
 
   /**
-   * Checks if a token with a specific identifier (jti) has been banned.
-   *
-   * @param jti - The identifier of the token to check if it has been banned.
-   * @returns A Promise that resolves to a boolean value indicating if the token has been banned (true) or not (false).
-   */
-  public async isTokenBanned(jti: string): Promise<boolean> {
-    const bannedKey = this.getBannedKey(jti);
-    const isBanned = await this.redis.exists(bannedKey);
-    return isBanned > 0;
-  }
-
-  /**
-   * Bans a token by storing it in a Redis database with an expiration time.
-   *
-   * @param jti - The identifier of the token to be banned.
-   * @param expiresAt - The expiration time of the banned token in seconds since the Unix epoch.
-   * @returns None.
-   */
-  public async banToken(jti: string, expiresAtSeconds: number): Promise<void> {
-    const bannedKey = this.getBannedKey(jti);
-    await this.redis.set(bannedKey, 'banned', 'EXAT', expiresAtSeconds);
-  }
-
-  private getBannedKey(jti: string): string {
-    return `jwt.banned.${jti}`;
-  }
-
-  /**
    * Generates an access token for the given subject and payload.
    */
   private async generateAccessToken(
@@ -96,7 +112,6 @@ export class TokensService {
     const jwtSignOptions: JwtSignOptions = {
       subject,
       expiresIn: this.accessTokenExpiresIn,
-      jwtid: this.jwtid(),
       ...options,
     };
 
@@ -120,7 +135,7 @@ export class TokensService {
     return this.jwtService.sign(payload || {}, jwtSignOptions);
   }
 
-  private jwtid(): string {
+  private generateJwtId(): string {
     return randomUUID();
   }
 }

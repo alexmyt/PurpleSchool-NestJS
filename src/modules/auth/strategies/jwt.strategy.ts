@@ -24,8 +24,8 @@ export class JwtAuthStrategy extends PassportStrategy(Strategy) {
   async validate(payload: JwtPayload): Promise<AuthenticatedUserInfo> {
     const { jti, sub, role } = payload;
 
-    const isBanned = await this.tokensService.isTokenBanned(jti);
-    if (isBanned) {
+    const refreshSessionExists = await this.tokensService.isRefreshSessionExists(sub, jti);
+    if (!refreshSessionExists) {
       throw new ForbiddenException(ERROR_INVALID_TOKEN);
     }
 

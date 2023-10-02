@@ -37,7 +37,6 @@ describe('TokensService', () => {
       hashedPassword: 'hashedPassword',
     };
     const authUserInfo = {
-      id: user._id.toHexString(),
       role: user.role,
     };
     const accessToken = 'accessToken';
@@ -55,7 +54,14 @@ describe('TokensService', () => {
     // Assert
     expect(usersService.findOneByEmail).toHaveBeenCalledWith(email);
     expect(HelperService.verifyPassword).toHaveBeenCalledWith(password, user.hashedPassword);
-    expect(tokensService.generateTokenPair).toHaveBeenCalledWith(authUserInfo);
-    expect(result).toEqual({ accessToken, refreshToken, user: authUserInfo });
+    expect(tokensService.generateTokenPair).toHaveBeenCalledWith(
+      user._id.toHexString(),
+      authUserInfo,
+    );
+    expect(result).toEqual({
+      accessToken,
+      refreshToken,
+      user: { id: user._id.toHexString(), ...authUserInfo },
+    });
   });
 });

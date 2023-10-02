@@ -43,11 +43,14 @@ export class AuthService {
       throw new UnauthorizedException(ERROR_LOGIN_FAILED);
     }
 
-    const authUserInfo = this.getAuthUserInfo(user);
+    const { id: sub, ...authUserInfo } = this.getAuthUserInfo(user);
 
-    const { accessToken, refreshToken } = await this.tokensService.generateTokenPair(authUserInfo);
+    const { accessToken, refreshToken } = await this.tokensService.generateTokenPair(
+      sub,
+      authUserInfo,
+    );
 
-    return { accessToken, refreshToken, user: authUserInfo };
+    return { accessToken, refreshToken, user: { id: sub, ...authUserInfo } };
   }
 
   /**
@@ -57,25 +60,27 @@ export class AuthService {
    * @returns A promise that resolves to an object containing the new access token, new refresh token, and the user information.
    */
   public async refreshTokens(incomingRefreshToken: string): Promise<AuthResponse> {
-    const { jti, exp, sub } = await this.tokensService.verify<JwtPayload>(incomingRefreshToken);
+    const { jti, sub } = await this.tokensService.verify<JwtPayload>(incomingRefreshToken);
 
-    const tokenIsBanned = await this.tokensService.isTokenBanned(jti);
-    if (tokenIsBanned) {
+    const refreshSessionExists = await this.tokensService.isRefreshSessionExists(sub, jti);
+    if (!refreshSessionExists) {
       throw new ForbiddenException(ERROR_INVALID_TOKEN);
     }
-
-    await this.tokensService.banToken(jti, exp);
 
     const userFromToken = await this.usersService.findOneById(sub);
     if (!userFromToken) {
       throw new UnauthorizedException(ERROR_LOGIN_FAILED);
     }
 
-    const authUserInfo = this.getAuthUserInfo(userFromToken);
+    const { id, ...authUserInfo } = this.getAuthUserInfo(userFromToken);
 
-    const { accessToken, refreshToken } = await this.tokensService.generateTokenPair(authUserInfo);
+    const { accessToken, refreshToken } = await this.tokensService.refreshTokenPair(
+      id,
+      jti,
+      authUserInfo,
+    );
 
-    return { accessToken, refreshToken, user: authUserInfo };
+    return { accessToken, refreshToken, user: { id, ...authUserInfo } };
   }
 
   private getAuthUserInfo(user: UserModelDocument): AuthenticatedUserInfo {
