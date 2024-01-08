@@ -4,7 +4,7 @@ name: default
 
 steps:
   - name: deploy stage
-    image: appleboy/drone-ssh:1.6.4
+    image: appleboy/drone-ssh:1.16.13
     settings:
       host:
         from_secret: stage_ssh_host
