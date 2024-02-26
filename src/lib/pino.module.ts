@@ -26,38 +26,38 @@ const basePinoOptions = {
             transport: isTestEnv
               ? undefined
               : isProdEnv
-              ? {
-                  target: 'pino/file',
-                  level: 'error', // log only errors to file
-                  options: {
-                    ...basePinoOptions,
-                    destination: 'logs/error.log',
-                    mkdir: true,
-                    sync: false,
+                ? {
+                    target: 'pino/file',
+                    level: 'error', // log only errors to file
+                    options: {
+                      ...basePinoOptions,
+                      destination: 'logs/error.log',
+                      mkdir: true,
+                      sync: false,
+                    },
+                  }
+                : {
+                    targets: [
+                      {
+                        target: 'pino-pretty',
+                        level: 'info', // log only info and above to console
+                        options: {
+                          ...basePinoOptions,
+                          colorize: true,
+                        },
+                      },
+                      {
+                        target: 'pino/file',
+                        level: 'error', // log only errors to file
+                        options: {
+                          ...basePinoOptions,
+                          destination: 'logs/error.log',
+                          mkdir: true,
+                          sync: false,
+                        },
+                      },
+                    ],
                   },
-                }
-              : {
-                  targets: [
-                    {
-                      target: 'pino-pretty',
-                      level: 'info', // log only info and above to console
-                      options: {
-                        ...basePinoOptions,
-                        colorize: true,
-                      },
-                    },
-                    {
-                      target: 'pino/file',
-                      level: 'error', // log only errors to file
-                      options: {
-                        ...basePinoOptions,
-                        destination: 'logs/error.log',
-                        mkdir: true,
-                        sync: false,
-                      },
-                    },
-                  ],
-                },
             level: isTestEnv ? 'silent' : 'info',
           },
         };

@@ -32,6 +32,7 @@ const removeDefaultSecurityFromPublicMethods = (document: OpenAPIObject): void =
   }
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const addResponsesAdditionalProperties = (document: OpenAPIObject): void => {
   // TODO
 };

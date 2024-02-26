@@ -7,7 +7,7 @@ const fakeUser = () => {
   return {
     name: faker.person.fullName(),
     email: faker.internet.email(),
-    phone: faker.phone.number('+79#########'),
+    phone: faker.helpers.fromRegExp(/\+79[0-9]{9}/),
     password: faker.internet.password(),
     role: UserRole.USER,
   };
@@ -36,6 +36,6 @@ export const testUsers = {
 export const createUserDto = {
   name: faker.person.fullName(),
   email: faker.internet.email(),
-  phone: faker.phone.number('+79#########'),
+  phone: faker.helpers.fromRegExp(/\+79[0-9]{9}/),
   password: faker.internet.password(),
 };
