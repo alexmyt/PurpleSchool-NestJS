@@ -19,8 +19,10 @@ export class TokensService {
     private readonly configService: ConfigService<IConfig>,
     private readonly tokensRepository: TokensRepository,
   ) {
-    this.refreshTokenExpiresIn = this.configService.get('jwt.refreshExpire', { infer: true });
-    this.accessTokenExpiresIn = this.configService.get('jwt.accessExpire', { infer: true });
+    this.refreshTokenExpiresIn = this.configService.getOrThrow('jwt.refreshExpire', {
+      infer: true,
+    });
+    this.accessTokenExpiresIn = this.configService.getOrThrow('jwt.accessExpire', { infer: true });
   }
 
   /**
