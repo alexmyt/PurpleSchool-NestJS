@@ -3,13 +3,11 @@ import { ApiForbiddenResponse, ApiOkResponse, ApiUnauthorizedResponse } from '@n
 
 import { Public } from '../../common/decorators/public.decorator';
 import { GenericController } from '../../common/decorators/controller.decorator';
-import { AuthUser } from '../../common/decorators/auth-user.decorator';
 
 import { AuthService } from './auth.service';
 import { UserLoginDTO } from './dto/user-login.dto';
 import { UserLoginResponseDTO } from './dto/user-login.response';
 import { RefreshTokenDTO } from './dto/refresh-token.dto';
-import { AuthenticatedUserInfo } from './auth.interface';
 
 @GenericController('auth', false)
 export class AuthController {
