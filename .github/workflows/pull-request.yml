@@ -60,7 +60,7 @@ jobs:
           mongodb-db: test
 
       - name: Start Redis
-        uses: supercharge/redis-github-action@1.6.0
+        uses: supercharge/redis-github-action@1.8.0
 
       - name: Run tests
         run: npm run test:e2e -- --detectOpenHandles
